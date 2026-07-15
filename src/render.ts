@@ -4,19 +4,22 @@
  * No fs, no fetch -- importable by any Node.js build harness, Next.js Route Handler,
  * or static site generator. The same codebase powers:
  *  - sifa-academicpages (GitHub Pages, self-hosted static sites)
- *  - sifa-web `/p/{handle}/academic` (server-rendered on demand)
+ *  - sifa-web `/p/{handle}/site` (server-rendered on demand)
  *
  * Layout matches academicpages.github.io: a top masthead with horizontal nav,
  * a left sidebar with avatar / identity / links shown as content, main content,
  * and a Sifa-branded footer.
  *
- * `profile` is the SDK `Profile` type (or any structurally-compatible object).
- * `sections` come from parsing the `.md` export. `ctx` carries build/request
- * metadata (year, last-updated date, OG tags, path overrides).
+ * `profile` supplies the identity (name, avatar, headline, location, links)
+ * rendered in the sidebar/footer -- structurally a subset of the SDK `Profile`.
+ * Body `sections` are built from the structured SDK `Profile` via
+ * {@link buildProfileSections} (see `./sections.ts`); their HTML is already
+ * sanitized/escaped. `ctx` carries build/request metadata (year, last-updated
+ * date, OG tags, CSP nonce, path overrides).
  */
 
-import { marked } from 'marked';
-import DOMPurify from 'isomorphic-dompurify';
+import { escapeHtml, safeUrl } from './util.js';
+import type { RenderedSection } from './sections.js';
 
 // --- Public types -----------------------------------------------------------
 
@@ -59,12 +62,6 @@ export interface AcademicProfile {
     region?: string | null;
     country?: string | null;
   } | null;
-}
-
-/** A parsed markdown section (title + body). */
-export interface ParsedSection {
-  title: string;
-  body: string;
 }
 
 /** Context passed to every render call. */
@@ -114,43 +111,6 @@ export interface OpenGraphMeta {
   image?: string;
   siteName?: string;
   type?: string;
-}
-
-// --- .md parsing -----------------------------------------------------------
-
-/** Parse a markdown string into sections keyed by `##` headings. */
-export function parseSections(md: string): ParsedSection[] {
-  const lines = md.split('\n');
-  const accum: Array<{ title: string; body: string[] }> = [];
-  let current: { title: string; body: string[] } | null = null;
-
-  for (const line of lines) {
-    const m = line.match(/^## (.+)$/);
-    if (m) {
-      current = { title: m[1].trim(), body: [] };
-      accum.push(current);
-    } else if (current) {
-      current.body.push(line);
-    }
-  }
-
-  return accum
-    .map((s) => ({ title: s.title, body: s.body.join('\n').trim() }))
-    .filter((s) => s.body);
-}
-
-/** Convert a section title to a URL-safe slug for filenames and anchors. */
-export function sectionSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-/** The "Links" section is rendered in the sidebar, not as its own page. */
-export function isSidebarOnly(title: string): boolean {
-  return title.toLowerCase() === 'links';
 }
 
 // --- identity helpers -------------------------------------------------------
@@ -265,16 +225,11 @@ function dedupeByUrl<T extends { url: string } | null>(entries: T[]): T[] {
   });
 }
 
-function navItems(sections: ParsedSection[], activeSlug: string, singlePage?: boolean): string {
+function navItems(sections: RenderedSection[], activeSlug: string, singlePage?: boolean): string {
   return sections
-    .filter((s) => !isSidebarOnly(s.title))
     .map((s) => {
-      const isAbout = s.title.toLowerCase() === 'about';
-      const slug = isAbout ? 'index' : sectionSlug(s.title);
-      const href = singlePage ? `#${slug}` : (isAbout ? 'index.html' : `${slug}.html`);
-      const active = isAbout
-        ? activeSlug === 'index'
-        : slug === activeSlug;
+      const href = singlePage ? `#${s.slug}` : `${s.slug}.html`;
+      const active = s.slug === activeSlug;
       return `<a href="${href}"${active ? ' aria-current="page" class="active"' : ''}>${escapeHtml(s.title)}</a>`;
     })
     .join('\n');
@@ -283,7 +238,7 @@ function navItems(sections: ParsedSection[], activeSlug: string, singlePage?: bo
 // --- render: masthead (top nav) --------------------------------------------
 
 function masthead(
-  sections: ParsedSection[],
+  sections: RenderedSection[],
   activeSlug: string,
   paths: Required<RenderPaths>,
   singlePage?: boolean,
@@ -376,7 +331,7 @@ function ogTags(og?: OpenGraphMeta): string {
 function layout(opts: {
   title: string;
   profile: AcademicProfile;
-  sections: ParsedSection[];
+  sections: RenderedSection[];
   activeSlug: string;
   main: string;
   ctx?: RenderContext;
@@ -450,14 +405,14 @@ function singlePageScript(nonceAttr = ''): string {
 
 // --- render: pages ----------------------------------------------------------
 
-/** Render the home/about page. */
+/** Render the home/about page (multi-page mode). */
 export function renderHome(
   profile: AcademicProfile,
-  sections: ParsedSection[],
+  sections: RenderedSection[],
   ctx?: RenderContext,
 ): string {
-  const about = sections.find((s) => s.title.toLowerCase() === 'about');
-  const aboutHtml = about ? renderMarkdown(about.body) : '<p>No bio yet.</p>';
+  const about = sections.find((s) => s.slug === 'index');
+  const aboutHtml = about ? about.html : '<p>No bio yet.</p>';
   const main = `
     <h2 class="page-title">About</h2>
     <div class="prose">${aboutHtml}</div>
@@ -472,22 +427,22 @@ export function renderHome(
   });
 }
 
-/** Render a section page (Experience, Education, etc.). */
+/** Render a single section page (Career, Education, etc.) in multi-page mode. */
 export function renderSectionPage(
   profile: AcademicProfile,
-  section: ParsedSection,
-  sections: ParsedSection[],
+  section: RenderedSection,
+  sections: RenderedSection[],
   ctx?: RenderContext,
 ): string {
   const main = `
     <h2 class="page-title">${escapeHtml(section.title)}</h2>
-    <div class="prose">${renderMarkdown(section.body)}</div>
+    <div class="prose">${section.html}</div>
   `;
   return layout({
     title: `${section.title} - ${profile.displayName ?? profile.handle ?? 'Profile'}`,
     profile,
     sections,
-    activeSlug: sectionSlug(section.title),
+    activeSlug: section.slug,
     main,
     ctx,
   });
@@ -500,13 +455,13 @@ export function renderSectionPage(
  */
 export function renderSinglePage(
   profile: AcademicProfile,
-  sections: ParsedSection[],
+  sections: RenderedSection[],
   ctx?: RenderContext,
 ): string {
-  const about = sections.find((s) => s.title.toLowerCase() === 'about');
-  const others = sections.filter((s) => s !== about && !isSidebarOnly(s.title));
+  const about = sections.find((s) => s.slug === 'index');
+  const others = sections.filter((s) => s.slug !== 'index');
+  const aboutHtml = about ? about.html : '<p>No bio yet.</p>';
 
-  const aboutHtml = about ? renderMarkdown(about.body) : '<p>No bio yet.</p>';
   const sectionHtml = (id: string, title: string, body: string, active: boolean) => `
     <section id="${id}" class="page-section"${active ? '' : ' hidden'}>
       <h2 class="page-title">${escapeHtml(title)}</h2>
@@ -515,7 +470,7 @@ export function renderSinglePage(
 
   const main = [
     sectionHtml('index', 'About', aboutHtml, true),
-    ...others.map((s) => sectionHtml(sectionSlug(s.title), s.title, renderMarkdown(s.body), false)),
+    ...others.map((s) => sectionHtml(s.slug, s.title, s.html, false)),
   ].join('\n');
 
   return layout({
@@ -528,73 +483,6 @@ export function renderSinglePage(
   });
 }
 
-// --- utils ------------------------------------------------------------------
-
-function escapeHtml(s: string | number | undefined | null): string {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-    };
-    return map[c] ?? c;
-  });
-}
-
-/**
- * Validate and escape a profile-supplied URL for use in an `href`/`src`
- * attribute. Rejects everything but `http:`/`https:` (blocks `javascript:`
- * and other executable schemes) and HTML-escapes the result so it can't
- * break out of the surrounding quotes. Returns `null` for anything unsafe
- * or unparseable so the caller can omit the attribute/element entirely.
- */
-function safeUrl(url: string | undefined | null): string | null {
-  if (!url) return null;
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return null;
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-  return escapeHtml(url);
-}
-
-/**
- * Convert profile-authored Markdown to HTML and sanitize it. `marked`
- * passes through raw HTML in its input verbatim (that's how Markdown
- * works), so unsanitized output would let profile content run arbitrary
- * script or event-handler attributes on the rendered page.
- */
-function renderMarkdown(body: string): string {
-  return DOMPurify.sanitize(marked.parse(body) as string, {
-    ALLOWED_TAGS: [
-      'p',
-      'br',
-      'strong',
-      'b',
-      'em',
-      'i',
-      'a',
-      'ul',
-      'ol',
-      'li',
-      'code',
-      'pre',
-      'blockquote',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-    ],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-  });
-}
-
 function svgSun(): string {
   return '<svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"/></g></svg>';
 }
@@ -602,3 +490,8 @@ function svgSun(): string {
 function svgMoon(): string {
   return '<svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z"/></svg>';
 }
+
+// --- re-exports (public API surface) ----------------------------------------
+
+export { buildProfileSections, type RenderedSection } from './sections.js';
+export { parseSections, sectionSlug, isSidebarOnly, type ParsedSection } from './slug.js';
