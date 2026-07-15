@@ -146,3 +146,74 @@ describe('getCSS / CSS', () => {
     expect(css).toContain("url('/fonts/academic/quattro-regular.woff2')");
   });
 });
+
+describe('security: sanitizing profile-authored content', () => {
+  it('strips <script> tags and event-handler attributes from Markdown bodies', () => {
+    const sections = parseSections(
+      '## About\n<script>alert(1)</script>\n\nHello<img src=x onerror="alert(1)">.\n',
+    );
+    const html = renderHome(PROFILE, sections);
+    expect(html).not.toContain('onerror');
+    expect(html).not.toContain('alert(1)');
+  });
+
+  it('allows the safe formatting tags Markdown produces', () => {
+    const sections = parseSections('## About\n**bold** and [a link](https://example.com).\n');
+    const html = renderHome(PROFILE, sections);
+    expect(html).toContain('<strong>bold</strong>');
+    expect(html).toContain('<a href="https://example.com">a link</a>');
+  });
+
+  it('drops javascript: URIs from Markdown links', () => {
+    const sections = parseSections('## About\n[click me](javascript:alert(1))\n');
+    const html = renderHome(PROFILE, sections);
+    expect(html).not.toContain('javascript:');
+  });
+
+  it('rejects a javascript: avatar URL and falls back to the placeholder', () => {
+    const html = renderHome({ ...PROFILE, avatar: 'javascript:alert(1)' }, []);
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('avatar-placeholder');
+  });
+
+  it('HTML-escapes an avatar URL containing a quote so it cannot break out of the src attribute', () => {
+    const html = renderHome(
+      { ...PROFILE, avatar: 'https://example.com/a.jpg" onerror="alert(1)' },
+      [],
+    );
+    expect(html).not.toContain('onerror="alert(1)"');
+  });
+
+  it('drops a javascript: external-account URL from the sidebar links', () => {
+    const html = renderHome(
+      { ...PROFILE, externalAccounts: [{ label: 'Evil', url: 'javascript:alert(1)' }] },
+      [],
+    );
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('Evil');
+  });
+
+  it('HTML-escapes an external-account URL containing a quote', () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        externalAccounts: [
+          { label: 'Site', url: 'https://example.com/" onclick="alert(1)' },
+        ],
+      },
+      [],
+    );
+    expect(html).not.toContain('onclick="alert(1)"');
+  });
+
+  it('applies the same sanitization in renderSectionPage and renderSinglePage', () => {
+    const sections = parseSections('## Career\n<script>alert(1)</script>Safe text.\n');
+    const career = sections[0]!;
+    const sectionHtml = renderSectionPage(PROFILE, career, sections);
+    const singleHtml = renderSinglePage(PROFILE, sections);
+    expect(sectionHtml).not.toContain('alert(1)');
+    expect(singleHtml).not.toContain('alert(1)');
+    expect(sectionHtml).toContain('Safe text.');
+    expect(singleHtml).toContain('Safe text.');
+  });
+});

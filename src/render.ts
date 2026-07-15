@@ -16,6 +16,7 @@
  */
 
 import { marked } from 'marked';
+import DOMPurify from 'isomorphic-dompurify';
 
 // --- Public types -----------------------------------------------------------
 
@@ -185,8 +186,9 @@ function sidebar(profile: AcademicProfile): string {
   const handle = profile.handle ?? '';
   const name = profile.displayName ?? handle ?? 'Profile';
 
-  const avatar = profile.avatar
-    ? `<img src="${profile.avatar}" alt="" class="avatar">`
+  const avatarSrc = safeUrl(profile.avatar);
+  const avatar = avatarSrc
+    ? `<img src="${avatarSrc}" alt="" class="avatar">`
     : `<div class="avatar avatar-placeholder">${escapeHtml(name).slice(0, 1)}</div>`;
 
   const headline = profile.headline
@@ -202,6 +204,7 @@ function sidebar(profile: AcademicProfile): string {
       url: a.url ?? '',
     })),
   ]
+    .map((e) => (e && e.url ? { label: e.label, url: safeUrl(e.url) } : null))
     .filter((e): e is { label: string; url: string } => Boolean(e && e.url))
     .map((e) => {
       const host = e.url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -330,7 +333,7 @@ export function renderHome(
   ctx?: RenderContext,
 ): string {
   const about = sections.find((s) => s.title.toLowerCase() === 'about');
-  const aboutHtml = about ? marked.parse(about.body) : '<p>No bio yet.</p>';
+  const aboutHtml = about ? renderMarkdown(about.body) : '<p>No bio yet.</p>';
   const main = `
     <h2 class="page-title">About</h2>
     <div class="prose">${aboutHtml}</div>
@@ -354,7 +357,7 @@ export function renderSectionPage(
 ): string {
   const main = `
     <h2 class="page-title">${escapeHtml(section.title)}</h2>
-    <div class="prose">${marked.parse(section.body)}</div>
+    <div class="prose">${renderMarkdown(section.body)}</div>
   `;
   return layout({
     title: `${section.title} - ${profile.displayName ?? profile.handle ?? 'Profile'}`,
@@ -379,7 +382,7 @@ export function renderSinglePage(
   const about = sections.find((s) => s.title.toLowerCase() === 'about');
   const others = sections.filter((s) => s !== about && !isSidebarOnly(s.title));
 
-  const aboutHtml = about ? marked.parse(about.body) : '<p>No bio yet.</p>';
+  const aboutHtml = about ? renderMarkdown(about.body) : '<p>No bio yet.</p>';
   const sectionHtml = (id: string, title: string, body: string, active: boolean) => `
     <section id="${id}" class="page-section"${active ? '' : ' hidden'}>
       <h2 class="page-title">${escapeHtml(title)}</h2>
@@ -387,8 +390,8 @@ export function renderSinglePage(
     </section>`;
 
   const main = [
-    sectionHtml('index', 'About', aboutHtml as string, true),
-    ...others.map((s) => sectionHtml(sectionSlug(s.title), s.title, marked.parse(s.body) as string, false)),
+    sectionHtml('index', 'About', aboutHtml, true),
+    ...others.map((s) => sectionHtml(sectionSlug(s.title), s.title, renderMarkdown(s.body), false)),
   ].join('\n');
 
   return layout({
@@ -413,6 +416,58 @@ function escapeHtml(s: string | number | undefined | null): string {
       "'": '&#39;',
     };
     return map[c] ?? c;
+  });
+}
+
+/**
+ * Validate and escape a profile-supplied URL for use in an `href`/`src`
+ * attribute. Rejects everything but `http:`/`https:` (blocks `javascript:`
+ * and other executable schemes) and HTML-escapes the result so it can't
+ * break out of the surrounding quotes. Returns `null` for anything unsafe
+ * or unparseable so the caller can omit the attribute/element entirely.
+ */
+function safeUrl(url: string | undefined | null): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  return escapeHtml(url);
+}
+
+/**
+ * Convert profile-authored Markdown to HTML and sanitize it. `marked`
+ * passes through raw HTML in its input verbatim (that's how Markdown
+ * works), so unsanitized output would let profile content run arbitrary
+ * script or event-handler attributes on the rendered page.
+ */
+function renderMarkdown(body: string): string {
+  return DOMPurify.sanitize(marked.parse(body) as string, {
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'a',
+      'ul',
+      'ol',
+      'li',
+      'code',
+      'pre',
+      'blockquote',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
   });
 }
 
