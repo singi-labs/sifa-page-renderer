@@ -1,5 +1,23 @@
 # @singi-labs/academicpages-renderer
 
+## 0.2.4
+
+### Patch Changes
+
+- Fix duplicate sidebar links, simplify link display, and read the current
+  location data shape.
+
+  - Deduplicate sidebar links by normalized URL. A link set as both
+    `profile.website` and an `externalAccounts` entry (e.g. a "website"
+    account marked primary) rendered twice.
+  - Sidebar links now show a single title (the custom label, or a properly
+    capitalized platform name like "GitHub"/"ORCID") instead of a label plus
+    the raw URL host text underneath.
+  - `locationLine` now prefers the structured `locations[]` array (using the
+    entry where `isPrimary` is true, and its pre-formatted `location` string
+    when present), falling back to the deprecated flat `location*` fields
+    for profiles that only have those.
+
 ## 0.2.3
 
 ### Patch Changes

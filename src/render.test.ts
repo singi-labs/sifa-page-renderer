@@ -217,3 +217,110 @@ describe('security: sanitizing profile-authored content', () => {
     expect(singleHtml).toContain('Safe text.');
   });
 });
+
+describe('sidebar links: dedupe by URL', () => {
+  it('does not duplicate a link that is set as both profile.website and an external account', () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: 'https://gui.do',
+        externalAccounts: [{ label: 'gui.do', platform: 'website', url: 'https://gui.do' }],
+      },
+      [],
+    );
+    const matches = html.match(/https:\/\/gui\.do/g) ?? [];
+    // Exactly one <a href> for gui.do -- the href itself, no second occurrence
+    // from a duplicated side-link entry.
+    expect(matches.length).toBe(1);
+    expect(html).toContain('Website');
+  });
+
+  it('treats a bare domain and its trailing-slash form as the same URL', () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: 'https://gui.do',
+        externalAccounts: [{ label: 'gui.do', url: 'https://gui.do/' }],
+      },
+      [],
+    );
+    const matches = html.match(/class="side-link"/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('still shows two distinct links when the URLs actually differ', () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: 'https://gui.do',
+        externalAccounts: [{ label: 'GitHub', url: 'https://github.com/gxjansen' }],
+      },
+      [],
+    );
+    expect(html).toContain('gui.do');
+    expect(html).toContain('github.com');
+  });
+});
+
+describe('sidebar links: title instead of label + raw URL', () => {
+  it('renders a single title per link, no separate host/URL text', () => {
+    const html = renderHome(
+      { ...PROFILE, externalAccounts: [{ label: 'My Blog', url: 'https://blog.example.com' }] },
+      [],
+    );
+    expect(html).not.toContain('side-link-host');
+    expect(html).not.toContain('side-link-label');
+    expect(html).toContain('<a class="side-link" href="https://blog.example.com" rel="me noopener" target="_blank">My Blog</a>');
+  });
+
+  it('falls back to a properly capitalized platform name when there is no custom label', () => {
+    const html = renderHome(
+      { ...PROFILE, externalAccounts: [{ platform: 'github', url: 'https://github.com/gxjansen' }] },
+      [],
+    );
+    expect(html).toContain('>GitHub<');
+  });
+
+  it('capitalizes an unrecognized platform value instead of showing it verbatim', () => {
+    const html = renderHome(
+      { ...PROFILE, externalAccounts: [{ platform: 'mastodon', url: 'https://example.social/@x' }] },
+      [],
+    );
+    expect(html).toContain('>Mastodon<');
+  });
+});
+
+describe('locationLine: prefers the structured locations[] array', () => {
+  it('uses the pre-formatted location string from the primary entry', () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        locationCity: undefined,
+        locationCountry: undefined,
+        locations: [
+          { isPrimary: false, location: 'Wrong one' },
+          { isPrimary: true, location: 'Rotterdam, Netherlands' },
+        ],
+      },
+      [],
+    );
+    expect(html).toContain('Rotterdam, Netherlands');
+    expect(html).not.toContain('Wrong one');
+  });
+
+  it('falls back to deprecated flat fields when locations[] is absent', () => {
+    const html = renderHome(
+      { ...PROFILE, locationCity: 'Amsterdam', locationCountry: 'NL' },
+      [],
+    );
+    expect(html).toContain('Amsterdam, NL');
+  });
+
+  it('shows nothing when neither locations[] nor flat fields are set', () => {
+    const html = renderHome(
+      { handle: 'jane', displayName: 'Jane', locationCity: undefined, locationCountry: undefined },
+      [],
+    );
+    expect(html).not.toContain('meta-line"></p>');
+  });
+});

@@ -1,6 +1,6 @@
 {
   "name": "@singi-labs/academicpages-renderer",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Pure HTML renderer for academicpages-style personal sites driven by Sifa profile data. No framework, no filesystem -- import and call.",
   "license": "MIT",
   "type": "module",

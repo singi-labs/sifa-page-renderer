@@ -81,11 +81,9 @@ a { color:var(--link); }
 
 /* links shown as content in the sidebar */
 .side-links { display:flex; flex-direction:column; gap:0.15rem; margin-top:1rem; }
-.side-link { display:flex; flex-direction:column; text-decoration:none; padding:0.25rem 0; border-top:1px solid var(--border); }
+.side-link { display:block; text-decoration:none; padding:0.4rem 0; border-top:1px solid var(--border); color:var(--fg); font-size:0.92rem; }
 .side-link:first-child { border-top:none; }
-.side-link-label { color:var(--fg); font-size:0.92rem; }
-.side-link-host { color:var(--muted); font-size:0.8rem; word-break:break-all; }
-.side-link:hover .side-link-label { color:var(--link); }
+.side-link:hover { color:var(--link); }
 
 .main { padding:2rem 2.5rem 3rem; min-width:0; }
 .page-section[hidden] { display:none; }

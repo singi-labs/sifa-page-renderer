@@ -32,6 +32,20 @@ export interface AcademicProfile {
   locationCity?: string | null;
   locationRegion?: string | null;
   locationCountry?: string | null;
+  /**
+   * Structured locations. Preferred over the flat `location*` fields above,
+   * which are deprecated legacy mirrors of the entry where `isPrimary` is
+   * true and may not be populated for every profile.
+   */
+  locations?: Array<{
+    isPrimary?: boolean | null;
+    /** Pre-formatted display string, e.g. "Rotterdam, Netherlands". */
+    location?: string | null;
+    locationLocality?: string | null;
+    locationCity?: string | null;
+    locationRegion?: string | null;
+    locationCountry?: string | null;
+  }> | null;
   externalAccounts?: Array<{
     label?: string | null;
     platform?: string | null;
@@ -134,13 +148,69 @@ export function isSidebarOnly(title: string): boolean {
 // --- identity helpers -------------------------------------------------------
 
 function locationLine(profile: AcademicProfile): string | null {
+  const primary = profile.locations?.find((l) => l.isPrimary) ?? profile.locations?.[0] ?? null;
+  if (primary?.location) return primary.location;
+
   const loc = profile.location;
   const flat = [
-    profile.locationLocality ?? profile.locationCity ?? loc?.locality ?? loc?.city,
-    profile.locationRegion ?? loc?.region,
-    profile.locationCountry ?? loc?.country,
+    primary?.locationLocality ??
+      primary?.locationCity ??
+      profile.locationLocality ??
+      profile.locationCity ??
+      loc?.locality ??
+      loc?.city,
+    primary?.locationRegion ?? profile.locationRegion ?? loc?.region,
+    primary?.locationCountry ?? profile.locationCountry ?? loc?.country,
   ].filter(Boolean);
   return flat.length ? flat.join(', ') : null;
+}
+
+/**
+ * Display names for known external-account platforms, used when the account
+ * has no custom label. Matches the platform list documented at
+ * https://docs.sifa.id/docs/external-accounts.
+ */
+const PLATFORM_LABELS: Record<string, string> = {
+  rss: 'RSS',
+  website: 'Website',
+  substack: 'Substack',
+  fediverse: 'Fediverse',
+  github: 'GitHub',
+  orcid: 'ORCID',
+  keyoxide: 'Keyoxide',
+  youtube: 'YouTube',
+  twitter: 'Twitter/X',
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+  other: 'Link',
+};
+
+function linkLabel(label?: string | null, platform?: string | null): string {
+  if (label) return label;
+  if (platform) return PLATFORM_LABELS[platform] ?? platform.charAt(0).toUpperCase() + platform.slice(1);
+  return 'Link';
+}
+
+/**
+ * Keep only the first entry for each distinct URL (normalized). Profiles
+ * commonly surface the same link twice: once as the dedicated `website`
+ * field, again inside `externalAccounts` (e.g. when a "website" account is
+ * marked primary). Without this, the sidebar would show that link twice.
+ */
+function dedupeByUrl<T extends { url: string } | null>(entries: T[]): T[] {
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    if (!e || !e.url) return true;
+    let key: string;
+    try {
+      key = new URL(e.url).toString();
+    } catch {
+      key = e.url;
+    }
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function navItems(sections: ParsedSection[], activeSlug: string, singlePage?: boolean): string {
@@ -197,19 +267,19 @@ function sidebar(profile: AcademicProfile): string {
   const loc = locationLine(profile);
   const locHtml = loc ? `<p class="meta-line">${escapeHtml(loc)}</p>` : '';
 
-  const linkEntries = [
+  const linkEntries = dedupeByUrl([
     profile.website ? { label: 'Website', url: profile.website } : null,
     ...(profile.externalAccounts ?? []).map((a) => ({
-      label: a.label ?? a.platform ?? 'Link',
+      label: linkLabel(a.label, a.platform),
       url: a.url ?? '',
     })),
-  ]
+  ])
     .map((e) => (e && e.url ? { label: e.label, url: safeUrl(e.url) } : null))
     .filter((e): e is { label: string; url: string } => Boolean(e && e.url))
-    .map((e) => {
-      const host = e.url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-      return `<a class="side-link" href="${e.url}" rel="me noopener" target="_blank"><span class="side-link-label">${escapeHtml(e.label)}</span><span class="side-link-host">${escapeHtml(host)}</span></a>`;
-    })
+    .map(
+      (e) =>
+        `<a class="side-link" href="${e.url}" rel="me noopener" target="_blank">${escapeHtml(e.label)}</a>`,
+    )
     .join('');
   const linksHtml = linkEntries ? `<div class="side-links">${linkEntries}</div>` : '';
 
