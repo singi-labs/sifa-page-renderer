@@ -50,6 +50,7 @@
     "prepare": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run --max-workers=2",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "npm run build && changeset publish"
@@ -63,7 +64,8 @@
   "devDependencies": {
     "@changesets/cli": "2.31.0",
     "tsup": "8.5.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.8"
   },
   "allowScripts": {
     "esbuild@0.27.7": true,
