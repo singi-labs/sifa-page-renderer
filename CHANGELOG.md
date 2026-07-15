@@ -1,5 +1,34 @@
 # @singi-labs/academicpages-renderer
 
+## 0.2.7
+
+### Patch Changes
+
+- Render body sections from the structured SDK `Profile` instead of re-parsing
+  the profile's `.md` export.
+
+  - New `buildProfileSections(profile)` turns an SDK `Profile` into an array of
+    `RenderedSection` (`{ id, slug, title, html }`), driven by the shared
+    `@singi-labs/sifa-sdk` section model (`ALL_SECTIONS`, `getVisibleSectionIds`,
+    the per-section sorts, involvement grouping) and formatters
+    (`formatDateRange`, `formatTimelineDate`, `formatCompanyName`, ...). This
+    gives every surface exact ordering parity with the main Sifa profile page and
+    richer detail (proper dates, validated links, publication citations).
+  - `renderHome`, `renderSectionPage`, and `renderSinglePage` now take the
+    pre-rendered `RenderedSection[]` (their `html` is already sanitized) instead
+    of Markdown `ParsedSection[]`. Consumers call `buildProfileSections(profile)`
+    and pass the result. Section slugs and nav labels are unchanged
+    (`about` -> `index`, `Talks & sessions` -> `talks-and-sessions`, ...), so
+    existing anchors and static filenames stay stable.
+  - Security is preserved: About and every free-text description/activities blurb
+    still go through the `marked` + DOMPurify allowlist, structured fields are
+    HTML-escaped, and profile-supplied URLs go through `safeUrl` (http/https
+    only, escaped). The CSP nonce, sidebar link dedup/icons, and location logic
+    are unchanged.
+  - `parseSections` / `sectionSlug` / `isSidebarOnly` remain exported for
+    consumers that still parse `.md`, but the renderer no longer uses `.md`.
+  - Adds `@singi-labs/sifa-sdk` as a (pure, framework-free) runtime dependency.
+
 ## 0.2.4
 
 ### Patch Changes

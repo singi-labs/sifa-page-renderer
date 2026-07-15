@@ -10,5 +10,5 @@ export default defineConfig({
   splitting: false,
   target: 'es2022',
   minify: false,
-  external: ['marked'],
+  external: ['marked', '@singi-labs/sifa-sdk'],
 });

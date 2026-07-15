@@ -7,6 +7,7 @@ import {
   renderSectionPage,
   renderSinglePage,
   type AcademicProfile,
+  type RenderedSection,
 } from './render';
 import { getCSS, CSS } from './style';
 
@@ -32,6 +33,20 @@ const PROFILE: AcademicProfile = {
   locationCountry: 'NL',
   externalAccounts: [{ label: 'Website', url: 'https://jane.example' }],
 };
+
+// Pre-rendered structured sections, as produced by buildProfileSections. The
+// render functions consume these directly (their `html` is already sanitized);
+// section-generation itself is covered in sections.test.ts.
+const SECTIONS: RenderedSection[] = [
+  { id: 'about', slug: 'index', title: 'About', html: '<p>I build things.</p>' },
+  {
+    id: 'career',
+    slug: 'career',
+    title: 'Career',
+    html: '<ul class="cv-list"><li class="cv-entry"><strong>Job A</strong></li></ul>',
+  },
+  { id: 'education', slug: 'education', title: 'Education', html: '<p>School.</p>' },
+];
 
 describe('parseSections', () => {
   it('parses ## headings into sections with trimmed bodies', () => {
@@ -68,8 +83,7 @@ describe('isSidebarOnly', () => {
 
 describe('renderHome', () => {
   it('renders the About section with profile identity and default multi-page nav', () => {
-    const sections = parseSections(MD_FIXTURE);
-    const html = renderHome(PROFILE, sections, { year: 2026 });
+    const html = renderHome(PROFILE, SECTIONS, { year: 2026 });
     expect(html).toContain('Jane Doe');
     expect(html).toContain('I build things.');
     expect(html).toContain('href="career.html"');
@@ -100,30 +114,39 @@ describe('renderHome', () => {
 
 describe('renderSectionPage', () => {
   it('renders the given section as active and marks it in the nav', () => {
-    const sections = parseSections(MD_FIXTURE);
-    const career = sections.find((s) => s.title === 'Career')!;
-    const html = renderSectionPage(PROFILE, career, sections);
+    const career = SECTIONS.find((s) => s.slug === 'career')!;
+    const html = renderSectionPage(PROFILE, career, SECTIONS);
     expect(html).toContain('Career - Jane Doe');
-    expect(html).toContain('<li>Job A');
+    expect(html).toContain('<strong>Job A</strong>');
     expect(html).toContain('aria-current="page"');
+  });
+
+  it('embeds the section HTML verbatim (already sanitized by buildProfileSections)', () => {
+    const section: RenderedSection = {
+      id: 'career',
+      slug: 'career',
+      title: 'Career',
+      html: '<ul class="cv-list"><li>Trusted &amp; safe</li></ul>',
+    };
+    const html = renderSectionPage(PROFILE, section, [section]);
+    expect(html).toContain('<ul class="cv-list"><li>Trusted &amp; safe</li></ul>');
   });
 });
 
 describe('renderSinglePage', () => {
-  it('renders all non-sidebar sections in one document, About active and others hidden', () => {
-    const sections = parseSections(MD_FIXTURE);
-    const html = renderSinglePage(PROFILE, sections, { year: 2026 });
+  it('renders all sections in one document, About active and others hidden', () => {
+    const html = renderSinglePage(PROFILE, SECTIONS, { year: 2026 });
 
     expect(html).toMatch(/<section id="index" class="page-section">/);
     expect(html).toMatch(/<section id="career" class="page-section" hidden>/);
     expect(html).toMatch(/<section id="education" class="page-section" hidden>/);
-    // "Links" is sidebar-only, never rendered as a page section.
+    // "Links" is sidebar-only, so buildProfileSections never emits it as a body
+    // section -- it is not in SECTIONS and must not appear as a page section.
     expect(html).not.toContain('id="links"');
   });
 
   it('uses hash-fragment nav links instead of .html files', () => {
-    const sections = parseSections(MD_FIXTURE);
-    const html = renderSinglePage(PROFILE, sections);
+    const html = renderSinglePage(PROFILE, SECTIONS);
     expect(html).toContain('href="#index"');
     expect(html).toContain('href="#career"');
     expect(html).not.toContain('.html"');
@@ -237,29 +260,7 @@ describe('getCSS / CSS', () => {
   });
 });
 
-describe('security: sanitizing profile-authored content', () => {
-  it('strips <script> tags and event-handler attributes from Markdown bodies', () => {
-    const sections = parseSections(
-      '## About\n<script>alert(1)</script>\n\nHello<img src=x onerror="alert(1)">.\n',
-    );
-    const html = renderHome(PROFILE, sections);
-    expect(html).not.toContain('onerror');
-    expect(html).not.toContain('alert(1)');
-  });
-
-  it('allows the safe formatting tags Markdown produces', () => {
-    const sections = parseSections('## About\n**bold** and [a link](https://example.com).\n');
-    const html = renderHome(PROFILE, sections);
-    expect(html).toContain('<strong>bold</strong>');
-    expect(html).toContain('<a href="https://example.com">a link</a>');
-  });
-
-  it('drops javascript: URIs from Markdown links', () => {
-    const sections = parseSections('## About\n[click me](javascript:alert(1))\n');
-    const html = renderHome(PROFILE, sections);
-    expect(html).not.toContain('javascript:');
-  });
-
+describe('security: sidebar / identity fields', () => {
   it('rejects a javascript: avatar URL and falls back to the placeholder', () => {
     const html = renderHome({ ...PROFILE, avatar: 'javascript:alert(1)' }, []);
     expect(html).not.toContain('javascript:');
@@ -294,17 +295,6 @@ describe('security: sanitizing profile-authored content', () => {
       [],
     );
     expect(html).not.toContain('onclick="alert(1)"');
-  });
-
-  it('applies the same sanitization in renderSectionPage and renderSinglePage', () => {
-    const sections = parseSections('## Career\n<script>alert(1)</script>Safe text.\n');
-    const career = sections[0]!;
-    const sectionHtml = renderSectionPage(PROFILE, career, sections);
-    const singleHtml = renderSinglePage(PROFILE, sections);
-    expect(sectionHtml).not.toContain('alert(1)');
-    expect(singleHtml).not.toContain('alert(1)');
-    expect(sectionHtml).toContain('Safe text.');
-    expect(singleHtml).toContain('Safe text.');
   });
 });
 

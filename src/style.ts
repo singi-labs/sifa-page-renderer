@@ -98,6 +98,22 @@ a { color:var(--link); }
 .prose li { margin-bottom:0.4rem; }
 .prose a { word-break:break-word; }
 
+/* structured CV entries (career, education, publications, ...) built from the
+   SDK profile model. Additive: no existing selector is changed. */
+.prose .cv-list { list-style:none; padding-left:0; margin:0.4rem 0 0; }
+.prose .cv-list .cv-entry { margin:0 0 1.1rem; }
+.prose .cv-list .cv-entry:last-child { margin-bottom:0; }
+.prose .cv-cite { line-height:1.5; }
+.cv-when { color:var(--muted); font-weight:400; font-size:0.92em; }
+.cv-venue { font-style:italic; }
+.cv-meta { color:var(--muted); font-size:0.9em; margin:0.15rem 0 0; }
+.cv-desc { margin:0.35rem 0 0; }
+.cv-desc > :first-child { margin-top:0; }
+.cv-desc > :last-child { margin-bottom:0; }
+.cv-skills { color:var(--muted); font-size:0.88em; margin-top:0.25rem; }
+.prose .cv-taglist { list-style:none; padding-left:0; margin:0.35rem 0 0; display:flex; flex-wrap:wrap; gap:0.4rem; }
+.prose .cv-taglist li { margin:0; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:0.1rem 0.55rem; font-size:0.88em; }
+
 .site-footer {
   max-width:1100px; margin:0 auto; padding:1.4rem 2.5rem 3rem; border-top:1px solid var(--border);
   display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem 1.5rem;

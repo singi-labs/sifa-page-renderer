@@ -4,7 +4,11 @@ Pure HTML renderer for [academicpages](https://academicpages.github.io/)-style p
 
 ## What it does
 
-Takes a Sifa profile (structured identity) and parsed markdown sections, returns complete standalone HTML pages with:
+Takes a Sifa profile object and returns complete standalone HTML pages. Body
+sections are built from the structured SDK `Profile` (via `buildProfileSections`,
+driven by the shared `@singi-labs/sifa-sdk` section model), so ordering matches
+the main Sifa profile page and detail is rich (proper dates, validated links,
+publication citations). Each page has:
 
 - Top masthead with horizontal navigation
 - Left sidebar with avatar, identity, and links
@@ -19,21 +23,21 @@ Takes a Sifa profile (structured identity) and parsed markdown sections, returns
 
 ```javascript
 import { fetchProfile } from '@singi-labs/sifa-sdk/query/fetchers';
-import { parseSections, renderHome, renderSectionPage, sectionSlug, isSidebarOnly } from '@singi-labs/academicpages-renderer';
+import { buildProfileSections, renderHome, renderSectionPage } from '@singi-labs/academicpages-renderer';
 import { CSS } from '@singi-labs/academicpages-renderer/style';
 
-// Fetch data from sifa.id
+// Fetch the structured profile from sifa.id
 const profile = await fetchProfile({ baseUrl: 'https://sifa.id' }, 'your-handle.bsky.social');
-const md = await fetch('https://sifa.id/p/your-handle.bsky.social.md').then(r => r.text());
-const sections = parseSections(md);
+
+// Build sections from the structured profile (About + Career + ... , Links excluded)
+const sections = buildProfileSections(profile);
 
 // Render pages
 const indexHtml = renderHome(profile, sections, { year: 2026, updated: '2026-07-15' });
 for (const section of sections) {
-  if (section.title.toLowerCase() === 'about') continue;
-  if (isSidebarOnly(section.title)) continue;
+  if (section.slug === 'index') continue; // About is shown on the home page
   const html = renderSectionPage(profile, section, sections, { year: 2026 });
-  // Write to dist/${sectionSlug(section.title)}.html
+  // Write to dist/${section.slug}.html
 }
 ```
 
@@ -42,11 +46,13 @@ See [sifa-academicpages](https://github.com/singi-labs/sifa-academicpages) for a
 ### Server-rendered (Next.js, Fastify, etc.)
 
 ```typescript
-import { renderHome, parseSections } from '@singi-labs/academicpages-renderer';
+import { buildProfileSections, renderSinglePage } from '@singi-labs/academicpages-renderer';
 import { getCSS } from '@singi-labs/academicpages-renderer/style';
 
-// Override asset paths for your hosting setup
-const html = renderHome(profile, sections, {
+// Override asset paths for your hosting setup. renderSinglePage serves all
+// sections in one document with hash-based nav (#career, #education, ...).
+const sections = buildProfileSections(profile);
+const html = renderSinglePage(profile, sections, {
   paths: {
     css: '/api/style',
     assetDir: '/static/academic',
@@ -63,17 +69,31 @@ const html = renderHome(profile, sections, {
 
 ## API
 
-### `parseSections(md: string): ParsedSection[]`
+### `buildProfileSections(profile): RenderedSection[]`
 
-Parse a markdown string into sections keyed by `##` headings.
+Build every visible body section from a structured SDK `Profile`, in canonical
+order, each rendered to sanitized HTML: `{ id, slug, title, html }`. The Links
+section is excluded (it renders in the sidebar). Always the public visitor view
+(owner-hidden items dropped).
 
 ### `renderHome(profile, sections, ctx?): string`
 
-Render the home/about page. Returns a complete HTML document.
+Render the home/About page. `sections` is the `buildProfileSections` output.
+Returns a complete HTML document.
 
 ### `renderSectionPage(profile, section, sections, ctx?): string`
 
-Render a section page (Experience, Education, etc.). Returns a complete HTML document.
+Render a single section page (Career, Education, etc.). Returns a complete HTML document.
+
+### `renderSinglePage(profile, sections, ctx?): string`
+
+Render all sections in one document with hash-based nav, for server-rendered
+single-route hosts (e.g. sifa-web). Returns a complete HTML document.
+
+### `parseSections(md: string): ParsedSection[]`
+
+Parse a markdown string into `##`-keyed sections. Retained for consumers that
+still parse the `.md` export; the renderer itself no longer uses it.
 
 ### `sectionSlug(title: string): string`
 
@@ -108,11 +128,13 @@ cp -r node_modules/@singi-labs/academicpages-renderer/static/* dist/
 
 ## Data requirements
 
-The renderer expects two data inputs:
+The renderer expects a single data input:
 
-1. **Profile** -- a structurally-compatible SDK `Profile` object. At minimum: `handle`, `displayName`. Optional: `headline`, `about`, `avatar`, `website`, `location*`, `externalAccounts`.
-
-2. **Sections** -- parsed markdown from the Sifa `.md` export (`/p/{handle}.md`). Use `parseSections()` to convert the raw markdown string.
+- **Profile** -- an SDK `Profile` object (from `fetchProfile`). Identity fields
+  (`handle`, `displayName`, `headline`, `about`, `avatar`, `website`,
+  `location*`, `externalAccounts`) drive the sidebar/footer; the section arrays
+  (`positions`, `education`, `publications`, ...) drive the body sections via
+  `buildProfileSections`.
 
 ## License
 
