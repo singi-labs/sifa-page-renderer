@@ -88,6 +88,7 @@ a { color:var(--link); }
 .side-link:hover .side-link-label { color:var(--link); }
 
 .main { padding:2rem 2.5rem 3rem; min-width:0; }
+.page-section[hidden] { display:none; }
 .page-title { font-size:1.6rem; margin:0 0 1rem; padding-bottom:0.4rem; border-bottom:1px solid var(--border); }
 .prose h2 { font-size:1.15rem; margin:1.6rem 0 0.5rem; }
 .prose h3 { font-size:1rem; margin:1.3rem 0 0.4rem; }

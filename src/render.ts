@@ -62,6 +62,13 @@ export interface RenderContext {
   paths?: RenderPaths;
   /** Open Graph meta tags to inject into `<head>`. */
   og?: OpenGraphMeta;
+  /**
+   * When true, renders all sections in a single HTML document with JS-based
+   * section switching (nav links use hash fragments instead of .html files).
+   * Used by server-rendered contexts like sifa-web where multi-page static
+   * files aren't available.
+   */
+  singlePage?: boolean;
 }
 
 /** Path overrides for CSS, fonts, and static assets. */
@@ -135,15 +142,16 @@ function locationLine(profile: AcademicProfile): string | null {
   return flat.length ? flat.join(', ') : null;
 }
 
-function navItems(sections: ParsedSection[], activeSlug: string): string {
+function navItems(sections: ParsedSection[], activeSlug: string, singlePage?: boolean): string {
   return sections
     .filter((s) => !isSidebarOnly(s.title))
     .map((s) => {
       const isAbout = s.title.toLowerCase() === 'about';
-      const href = isAbout ? 'index.html' : `${sectionSlug(s.title)}.html`;
+      const slug = isAbout ? 'index' : sectionSlug(s.title);
+      const href = singlePage ? `#${slug}` : (isAbout ? 'index.html' : `${slug}.html`);
       const active = isAbout
         ? activeSlug === 'index'
-        : sectionSlug(s.title) === activeSlug;
+        : slug === activeSlug;
       return `<a href="${href}"${active ? ' aria-current="page" class="active"' : ''}>${escapeHtml(s.title)}</a>`;
     })
     .join('\n');
@@ -151,10 +159,15 @@ function navItems(sections: ParsedSection[], activeSlug: string): string {
 
 // --- render: masthead (top nav) --------------------------------------------
 
-function masthead(sections: ParsedSection[], activeSlug: string, paths: Required<RenderPaths>): string {
+function masthead(
+  sections: ParsedSection[],
+  activeSlug: string,
+  paths: Required<RenderPaths>,
+  singlePage?: boolean,
+): string {
   return `<header class="masthead">
   <div class="masthead-inner">
-    <nav class="top-nav">${navItems(sections, activeSlug)}\n    </nav>
+    <nav class="top-nav">${navItems(sections, activeSlug, singlePage)}\n    </nav>
     <div class="masthead-actions">
       <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" type="button">${svgSun()}${svgMoon()}</button>
       <a class="sifa-logo" href="https://sifa.id" title="Built with Sifa" target="_blank" rel="noopener">
@@ -261,7 +274,7 @@ function layout(opts: {
   <script>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 </head>
 <body>
-  ${masthead(sections, activeSlug, paths)}
+  ${masthead(sections, activeSlug, paths, ctx?.singlePage)}
   <div class="shell">
     ${sidebar(profile)}
     <main class="main">
@@ -285,10 +298,27 @@ ${main}
       <a href="https://github.com/singi-labs/sifa-academicpages">Self-host your own Sifa ID-driven page like this</a>
     </div>
   </footer>
-  <script>document.getElementById('theme-toggle').addEventListener('click',function(){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t);}catch(e){}});</script>
+  <script>document.getElementById('theme-toggle').addEventListener('click',function(){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t);}catch(e){}});</script>${ctx?.singlePage ? singlePageScript() : ''}
 </body>
 </html>
 `;
+}
+
+function singlePageScript(): string {
+  return `
+  <script>(function(){
+    function activate(slug){
+      document.querySelectorAll('.page-section').forEach(function(el){el.hidden=el.id!==slug;});
+      document.querySelectorAll('.top-nav a').forEach(function(a){
+        var isActive=a.getAttribute('href')==='#'+slug;
+        a.classList.toggle('active',isActive);
+        if(isActive){a.setAttribute('aria-current','page');}else{a.removeAttribute('aria-current');}
+      });
+    }
+    function fromHash(){activate(location.hash.replace('#','')||'index');}
+    window.addEventListener('hashchange',fromHash);
+    fromHash();
+  })();</script>`;
 }
 
 // --- render: pages ----------------------------------------------------------
@@ -333,6 +363,41 @@ export function renderSectionPage(
     activeSlug: sectionSlug(section.title),
     main,
     ctx,
+  });
+}
+
+/**
+ * Render all sections as one HTML document with JS-based section switching.
+ * Used by server-rendered contexts (e.g. sifa-web) that serve a single route
+ * instead of a multi-page static site.
+ */
+export function renderSinglePage(
+  profile: AcademicProfile,
+  sections: ParsedSection[],
+  ctx?: RenderContext,
+): string {
+  const about = sections.find((s) => s.title.toLowerCase() === 'about');
+  const others = sections.filter((s) => s !== about && !isSidebarOnly(s.title));
+
+  const aboutHtml = about ? marked.parse(about.body) : '<p>No bio yet.</p>';
+  const sectionHtml = (id: string, title: string, body: string, active: boolean) => `
+    <section id="${id}" class="page-section"${active ? '' : ' hidden'}>
+      <h2 class="page-title">${escapeHtml(title)}</h2>
+      <div class="prose">${body}</div>
+    </section>`;
+
+  const main = [
+    sectionHtml('index', 'About', aboutHtml as string, true),
+    ...others.map((s) => sectionHtml(sectionSlug(s.title), s.title, marked.parse(s.body) as string, false)),
+  ].join('\n');
+
+  return layout({
+    title: profile.displayName ?? profile.handle ?? 'Profile',
+    profile,
+    sections,
+    activeSlug: 'index',
+    main,
+    ctx: { ...ctx, singlePage: true },
   });
 }
 
