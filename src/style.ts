@@ -15,7 +15,7 @@ export interface CSSOptions {
 
 /** Generate the academicpages CSS with optional path overrides. */
 export function getCSS(opts?: CSSOptions): string {
-  const fontDir = opts?.fontDir ?? 'fonts';
+  const fontDir = opts?.fontDir ?? "fonts";
 
   return `
 @font-face { font-family:'Quattro'; src:url('${fontDir}/quattro-regular.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
@@ -60,6 +60,9 @@ a { color:var(--link); }
 .top-nav a.active { font-weight:700; }
 .masthead-actions { margin-left:auto; display:flex; align-items:center; gap:0.6rem; }
 .sifa-logo { display:inline-flex; align-items:center; line-height:0; }
+
+/* Mobile bottom nav + "More" sheet: desktop-hidden, shown in the media query. */
+.bottom-nav, .more-sheet { display:none; }
 
 .theme-toggle {
   background:none; border:1px solid var(--border); color:var(--muted);
@@ -128,16 +131,62 @@ a { color:var(--link); }
 
 @media (max-width:760px) {
   .masthead-inner { padding:0.6rem 1.25rem; }
-  .top-nav { width:100%; }
+  /* The horizontal nav is replaced by the fixed bottom bar on mobile. */
+  .top-nav { display:none; }
   .masthead-actions { margin-left:0; }
   .shell { grid-template-columns:1fr; }
   .sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); }
   .main { padding:1.5rem 1.25rem 2.5rem; }
   .site-footer { padding:1.4rem 1.25rem 2.5rem; }
   .footer-links { margin-left:0; }
+
+  /* Leave room for the fixed bottom bar so it never covers content/footer. */
+  body { padding-bottom:calc(58px + env(safe-area-inset-bottom,0px)); }
+
+  .bottom-nav {
+    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:var(--bg); border-top:1px solid var(--border);
+    padding:0.3rem 0.25rem calc(0.3rem + env(safe-area-inset-bottom,0px));
+  }
+  .bnav-item {
+    flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:none; border:none; cursor:pointer; text-decoration:none;
+    color:var(--muted); font-size:0.66rem; font-family:inherit; padding:0.25rem 0.15rem;
+  }
+  .bnav-item .nav-icon { width:22px; height:22px; }
+  .bnav-item span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bnav-item.active { color:var(--link); }
+
+  /* "More" bottom sheet */
+  /* :not([hidden]) so the sheet stays hidden until JS opens it (a plain
+     .more-sheet{display:block} would override the [hidden] attribute). */
+  .more-sheet:not([hidden]) { display:block; position:fixed; inset:0; z-index:30; }
+  .more-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.4); }
+  .more-panel {
+    position:absolute; left:0; right:0; bottom:0; background:var(--bg);
+    border-top-left-radius:16px; border-top-right-radius:16px;
+    max-height:70vh; overflow-y:auto; padding:0.5rem 1rem calc(1rem + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -8px 30px rgba(0,0,0,0.25);
+  }
+  .more-head {
+    display:flex; align-items:center; justify-content:space-between;
+    font-weight:700; padding:0.5rem 0.25rem; position:sticky; top:0; background:var(--bg);
+  }
+  .more-close { background:none; border:none; color:var(--muted); cursor:pointer; display:inline-flex; padding:0.25rem; }
+  .more-close:hover { color:var(--fg); }
+  .more-list { display:flex; flex-direction:column; }
+  .more-item {
+    display:flex; align-items:center; gap:0.75rem; padding:0.75rem 0.25rem;
+    color:var(--fg); text-decoration:none; border-top:1px solid var(--border); font-size:0.95rem;
+  }
+  .more-item:first-child { border-top:none; }
+  .more-item .nav-icon { width:20px; height:20px; color:var(--muted); flex:0 0 auto; }
+  .more-item.active { color:var(--link); font-weight:600; }
+  .more-item.active .nav-icon { color:var(--link); }
 }
 @media print {
-  .masthead, .sidebar, .site-footer { display:none; }
+  .masthead, .sidebar, .site-footer, .bottom-nav, .more-sheet { display:none; }
+  body { padding-bottom:0; }
   .shell { display:block; }
   .main { max-width:none; }
 }

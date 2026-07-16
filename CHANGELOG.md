@@ -1,5 +1,17 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.9
+
+### Patch Changes
+
+- Add a mobile bottom navigation. On narrow screens (<=760px) the horizontal
+  top nav is replaced by an app-style fixed bottom bar (icon + label per
+  section, Lucide icons). With more than 5 sections, the first 4 show in the
+  bar and the rest move into a "More" bottom sheet. Desktop is unchanged;
+  hidden in print. Sheet toggle + active-state sync scripts inherit the CSP
+  nonce.
+
+
 ## 0.2.8
 
 ### Patch Changes
