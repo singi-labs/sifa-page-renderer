@@ -1,5 +1,17 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.11
+
+### Patch Changes
+
+- SEO batch: emit `<meta name="description">`, `<link rel="canonical">` (from a
+  new `RenderContext.canonical`), `twitter:card=summary_large_image` (when an
+  og:image is present), and a **Schema.org `Person` JSON-LD** block (name, url,
+  alternateName, image, jobTitle, description, address, `sameAs` from the
+  profile links). The JSON-LD escapes `<` to prevent a `</script>` breakout and
+  carries the CSP nonce.
+
+
 ## 0.2.10
 
 ### Patch Changes

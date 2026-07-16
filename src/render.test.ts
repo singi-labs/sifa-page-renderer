@@ -190,8 +190,8 @@ describe("CSP nonce", () => {
   it("adds the nonce to every <script> tag in a single-page render", () => {
     const html = renderSinglePage(PROFILE, [], { nonce: "test-nonce-123" });
     const scriptTags = html.match(/<script\b[^>]*>/g) ?? [];
-    // theme init (head), theme toggle, section-switching script.
-    expect(scriptTags.length).toBe(3);
+    // theme init (head), theme toggle, section-switching script, JSON-LD.
+    expect(scriptTags.length).toBe(4);
     for (const tag of scriptTags) {
       expect(tag).toContain('nonce="test-nonce-123"');
     }
@@ -351,9 +351,9 @@ describe("sidebar links: dedupe by URL", () => {
       },
       []
     );
-    const matches = html.match(/https:\/\/gui\.do/g) ?? [];
-    // Exactly one <a href> for gui.do -- the href itself, no second occurrence
-    // from a duplicated side-link entry.
+    // Exactly one sidebar <a href> for gui.do (the JSON-LD sameAs also lists the
+    // URL, so match the href specifically rather than any occurrence).
+    const matches = html.match(/href="https:\/\/gui\.do"/g) ?? [];
     expect(matches.length).toBe(1);
     expect(html).toContain("Website");
   });
@@ -573,5 +573,75 @@ describe("sidebar links: differentiate + bluesky", () => {
     );
     expect(html).toContain('viewBox="0 0 600 530"'); // butterfly viewBox
     expect(html).toContain('side-link-label">Bluesky<');
+  });
+});
+
+describe("SEO meta + JSON-LD", () => {
+  it("emits canonical link, meta description, and twitter:card", () => {
+    const html = renderHome(PROFILE, [], {
+      canonical: "https://sifa.id/p/jane",
+      og: { description: "Jane on Sifa", image: "https://x/card" },
+    });
+    expect(html).toContain(
+      '<link rel="canonical" href="https://sifa.id/p/jane">'
+    );
+    expect(html).toContain('<meta name="description" content="Jane on Sifa">');
+    expect(html).toContain('twitter:card" content="summary_large_image"');
+  });
+
+  it("emits a valid Schema.org Person JSON-LD with sameAs from links", () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: "https://jane.example",
+        avatar: "https://cdn/x.png",
+        headline: "Engineer",
+        externalAccounts: [
+          { platform: "github", url: "https://github.com/jane" },
+        ],
+      },
+      [],
+      { canonical: "https://sifa.id/p/jane" }
+    );
+    const m = html.match(
+      /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/
+    );
+    expect(m).toBeTruthy();
+    const o = JSON.parse(m![1].replace(/\\u003c/g, "<"));
+    expect(o["@type"]).toBe("Person");
+    expect(o.name).toBe("Jane Doe");
+    expect(o.url).toBe("https://sifa.id/p/jane");
+    expect(o.sameAs).toEqual(
+      expect.arrayContaining([
+        "https://jane.example",
+        "https://github.com/jane",
+      ])
+    );
+    expect(o.jobTitle).toBe("Engineer");
+  });
+
+  it("escapes < in JSON-LD so user content cannot break out of the script", () => {
+    const html = renderHome(
+      { ...PROFILE, about: "</script><img src=x onerror=alert(1)>" },
+      [],
+      {}
+    );
+    const m = html.match(
+      /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/
+    );
+    expect(m![1]).not.toContain("</script");
+    expect(m![1]).not.toContain("<img");
+  });
+
+  it("nonces the JSON-LD script", () => {
+    expect(renderHome(PROFILE, [], { nonce: "abc" })).toContain(
+      'ld+json" nonce="abc"'
+    );
+  });
+
+  it("omits canonical/description tags when not provided", () => {
+    const html = renderHome(PROFILE, [], {});
+    expect(html).not.toContain('rel="canonical"');
+    expect(html).not.toContain('name="description"');
   });
 });
