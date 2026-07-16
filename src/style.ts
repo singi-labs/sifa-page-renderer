@@ -91,6 +91,9 @@ a { color:var(--link); }
 .side-link:hover { color:var(--link); }
 .side-link-icon { flex:0 0 auto; width:16px; height:16px; opacity:0.8; }
 .side-link:hover .side-link-icon { opacity:1; }
+.side-link-text { display:flex; flex-direction:column; min-width:0; }
+.side-link-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.side-link-sub { font-size:0.78em; color:var(--muted); line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .main { padding:2rem 2.5rem 3rem; min-width:0; }
 .page-section[hidden] { display:none; }

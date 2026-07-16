@@ -1,5 +1,16 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.10
+
+### Patch Changes
+
+- Sidebar links: (1) add the Bluesky butterfly icon + "Bluesky" label for
+  `bsky`/`bluesky` platforms (the same logo used on sifa.id); (2) when several
+  links share a label (e.g. multiple Bluesky accounts, all "Bluesky"), show a
+  compact URL under the label so visitors can tell them apart. Unique-label
+  links stay single-line.
+
+
 ## 0.2.9
 
 ### Patch Changes

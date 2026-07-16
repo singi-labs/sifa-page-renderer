@@ -147,6 +147,8 @@ const PLATFORM_LABELS: Record<string, string> = {
   website: "Website",
   substack: "Substack",
   fediverse: "Fediverse",
+  bsky: "Bluesky",
+  bluesky: "Bluesky",
   github: "GitHub",
   orcid: "ORCID",
   keyoxide: "Keyoxide",
@@ -165,6 +167,16 @@ function linkLabel(label?: string | null, platform?: string | null): string {
       platform.charAt(0).toUpperCase() + platform.slice(1)
     );
   return "Link";
+}
+
+/** Compact display form of a URL: no scheme, no `www.`, no trailing slash, truncated. */
+function displayUrl(url: string): string {
+  let s = url
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/$/, "");
+  if (s.length > 38) s = s.slice(0, 37) + "…";
+  return s;
 }
 
 /**
@@ -198,8 +210,18 @@ const PLATFORM_ICON_PATHS: Record<string, string> = {
  * Inline SVG icon for a link, chosen by platform. Known platforms get their
  * brand mark; everything else gets a generic globe.
  */
+// Bluesky butterfly (viewBox 0 0 600 530, unlike the 24x24 marks above), the
+// same logo used across sifa.id. Handled separately in linkIcon() for its
+// distinct viewBox.
+const BLUESKY_ICON_PATH =
+  "m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z";
+
 function linkIcon(platform?: string | null): string {
-  const d = PLATFORM_ICON_PATHS[(platform ?? "").toLowerCase()];
+  const key = (platform ?? "").toLowerCase();
+  if (key === "bsky" || key === "bluesky") {
+    return `<svg class="side-link-icon" viewBox="0 0 600 530" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="${BLUESKY_ICON_PATH}"/></svg>`;
+  }
+  const d = PLATFORM_ICON_PATHS[key];
   if (d) {
     return `<svg class="side-link-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="${d}"/></svg>`;
   }
@@ -362,7 +384,7 @@ function sidebar(profile: AcademicProfile): string {
     ? `<p class="meta-line meta-location">${pinIcon()}${escapeHtml(loc)}</p>`
     : "";
 
-  const linkEntries = dedupeByUrl([
+  const rawLinks = dedupeByUrl([
     profile.website
       ? { label: "Website", platform: "website", url: profile.website }
       : null,
@@ -372,22 +394,39 @@ function sidebar(profile: AcademicProfile): string {
       url: a.url ?? "",
     })),
   ])
-    .map((e) =>
-      e && e.url
-        ? { label: e.label, platform: e.platform, url: safeUrl(e.url) }
-        : null
-    )
-    .filter((e): e is { label: string; platform: string; url: string } =>
-      Boolean(e && e.url)
-    )
-    .map(
-      (e) =>
-        `<a class="side-link" href="${
-          e.url
-        }" rel="me noopener" target="_blank">${linkIcon(
-          e.platform
-        )}<span class="side-link-label">${escapeHtml(e.label)}</span></a>`
-    )
+    // Keep the raw url (for the differentiator line) alongside the escaped,
+    // scheme-validated href.
+    .map((e) => (e && e.url ? { ...e, href: safeUrl(e.url) } : null))
+    .filter(
+      (
+        e
+      ): e is { label: string; platform: string; url: string; href: string } =>
+        Boolean(e && e.href)
+    );
+
+  // When several links share the same label (e.g. multiple Bluesky accounts,
+  // all labelled "Bluesky"), show the URL underneath so visitors can tell them
+  // apart. Unique-label links stay single-line.
+  const labelCounts = new Map<string, number>();
+  for (const e of rawLinks)
+    labelCounts.set(e.label, (labelCounts.get(e.label) ?? 0) + 1);
+
+  const linkEntries = rawLinks
+    .map((e) => {
+      const sub =
+        (labelCounts.get(e.label) ?? 0) > 1
+          ? `<span class="side-link-sub">${escapeHtml(
+              displayUrl(e.url)
+            )}</span>`
+          : "";
+      return `<a class="side-link" href="${
+        e.href
+      }" rel="me noopener" target="_blank">${linkIcon(
+        e.platform
+      )}<span class="side-link-text"><span class="side-link-label">${escapeHtml(
+        e.label
+      )}</span>${sub}</span></a>`;
+    })
     .join("");
   const linksHtml = linkEntries
     ? `<div class="side-links">${linkEntries}</div>`

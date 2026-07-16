@@ -527,3 +527,51 @@ describe("mobile bottom nav", () => {
       expect(s).toContain('nonce="abc"');
   });
 });
+
+describe("sidebar links: differentiate + bluesky", () => {
+  it("shows the URL underneath when several links share a label", () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: undefined,
+        externalAccounts: [
+          { platform: "bsky", url: "https://bsky.app/profile/a.example" },
+          { platform: "bsky", url: "https://bsky.app/profile/b.example" },
+          { platform: "github", url: "https://github.com/x" },
+        ],
+      },
+      []
+    );
+    // both bsky links labelled "Bluesky" -> each gets a differentiating sub-line
+    expect((html.match(/side-link-sub">/g) ?? []).length).toBe(2);
+    expect(html).toContain("bsky.app/profile/a.example");
+    expect(html).toContain("bsky.app/profile/b.example");
+  });
+
+  it("keeps unique-label links single-line (no sub)", () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: undefined,
+        externalAccounts: [{ platform: "github", url: "https://github.com/x" }],
+      },
+      []
+    );
+    expect(html).not.toContain("side-link-sub");
+  });
+
+  it("renders the Bluesky butterfly for bsky/bluesky platforms", () => {
+    const html = renderHome(
+      {
+        ...PROFILE,
+        website: undefined,
+        externalAccounts: [
+          { platform: "bsky", url: "https://bsky.app/profile/x" },
+        ],
+      },
+      []
+    );
+    expect(html).toContain('viewBox="0 0 600 530"'); // butterfly viewBox
+    expect(html).toContain('side-link-label">Bluesky<');
+  });
+});
