@@ -1,12 +1,12 @@
 /**
- * Pure renderer for academicpages-style personal sites driven by Sifa profile data.
+ * Pure renderer for personal sites driven by Sifa profile data.
  *
  * No fs, no fetch -- importable by any Node.js build harness, Next.js Route Handler,
  * or static site generator. The same codebase powers:
- *  - sifa-academicpages (GitHub Pages, self-hosted static sites)
+ *  - sifa-pages (GitHub Pages, self-hosted static sites)
  *  - sifa-web `/p/{handle}/site` (server-rendered on demand)
  *
- * Layout matches academicpages.github.io: a top masthead with horizontal nav,
+ * Layout is styled after academicpages.github.io: a top masthead with horizontal nav,
  * a left sidebar with avatar / identity / links shown as content, main content,
  * and a Sifa-branded footer.
  *
@@ -377,7 +377,7 @@ ${main}
     <div class="footer-links">
       <a href="https://sifa.id/p/${encodeURIComponent(handle)}">View ${escapeHtml(name)}'s full Sifa ID</a>
       <a href="https://sifa.id">Claim your own profile</a>
-      <a href="https://github.com/singi-labs/sifa-academicpages">Self-host your own Sifa ID-driven page like this</a>
+      <a href="https://github.com/singi-labs/sifa-pages">Self-host your own Sifa ID-driven page like this</a>
     </div>
   </footer>
   <script${nonceAttr}>document.getElementById('theme-toggle').addEventListener('click',function(){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t);}catch(e){}});</script>${ctx?.singlePage ? singlePageScript(nonceAttr) : ''}

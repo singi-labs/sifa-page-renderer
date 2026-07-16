@@ -1,26 +1,25 @@
 {
-  "name": "@singi-labs/academicpages-renderer",
-  "version": "0.2.7",
-  "description": "Pure HTML renderer for academicpages-style personal sites driven by Sifa profile data. No framework, no filesystem -- import and call.",
+  "name": "@singi-labs/sifa-pages-renderer",
+  "version": "0.2.8",
+  "description": "Pure HTML renderer for personal sites driven by Sifa profile data. No framework, no filesystem -- import and call.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/singi-labs/sifa-academicpages",
+  "homepage": "https://github.com/singi-labs/sifa-pages",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/singi-labs/academicpages-renderer.git"
+    "url": "git+https://github.com/singi-labs/sifa-pages-renderer.git"
   },
   "bugs": {
-    "url": "https://github.com/singi-labs/sifa-academicpages/issues"
+    "url": "https://github.com/singi-labs/sifa-pages/issues"
   },
   "publishConfig": {
     "access": "public"
   },
   "keywords": [
-    "academicpages",
     "sifa",
     "atproto",
-    "academic-cv",
     "personal-site",
+    "pages",
     "renderer"
   ],
   "files": [

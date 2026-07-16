@@ -1,6 +1,6 @@
-# @singi-labs/academicpages-renderer
+# @singi-labs/sifa-pages-renderer
 
-Pure HTML renderer for [academicpages](https://academicpages.github.io/)-style personal sites driven by [Sifa](https://sifa.id) profile data. No framework, no filesystem -- import and call.
+Pure HTML renderer for personal sites driven by [Sifa](https://sifa.id) profile data, styled after [academicpages.github.io](https://academicpages.github.io/). No framework, no filesystem -- import and call.
 
 ## What it does
 
@@ -23,8 +23,8 @@ publication citations). Each page has:
 
 ```javascript
 import { fetchProfile } from '@singi-labs/sifa-sdk/query/fetchers';
-import { buildProfileSections, renderHome, renderSectionPage } from '@singi-labs/academicpages-renderer';
-import { CSS } from '@singi-labs/academicpages-renderer/style';
+import { buildProfileSections, renderHome, renderSectionPage } from '@singi-labs/sifa-pages-renderer';
+import { CSS } from '@singi-labs/sifa-pages-renderer/style';
 
 // Fetch the structured profile from sifa.id
 const profile = await fetchProfile({ baseUrl: 'https://sifa.id' }, 'your-handle.bsky.social');
@@ -41,13 +41,13 @@ for (const section of sections) {
 }
 ```
 
-See [sifa-academicpages](https://github.com/singi-labs/sifa-academicpages) for a complete self-hosting scaffold.
+See [sifa-pages](https://github.com/singi-labs/sifa-pages) for a complete self-hosting scaffold.
 
 ### Server-rendered (Next.js, Fastify, etc.)
 
 ```typescript
-import { buildProfileSections, renderSinglePage } from '@singi-labs/academicpages-renderer';
-import { getCSS } from '@singi-labs/academicpages-renderer/style';
+import { buildProfileSections, renderSinglePage } from '@singi-labs/sifa-pages-renderer';
+import { getCSS } from '@singi-labs/sifa-pages-renderer/style';
 
 // Override asset paths for your hosting setup. renderSinglePage serves all
 // sections in one document with hash-based nav (#career, #education, ...).
@@ -55,14 +55,14 @@ const sections = buildProfileSections(profile);
 const html = renderSinglePage(profile, sections, {
   paths: {
     css: '/api/style',
-    assetDir: '/static/academic',
-    fontDir: '/fonts/academic',
-    favicon: '/static/academic/favicon.svg',
+    assetDir: '/static/sifa',
+    fontDir: '/fonts/sifa',
+    favicon: '/static/sifa/favicon.svg',
   },
   og: {
-    title: 'Jane Doe - Academic CV',
-    description: 'Academic profile on Sifa ID',
-    url: 'https://example.com/p/jane/academic',
+    title: 'Jane Doe - Personal site',
+    description: 'Jane Doe on Sifa ID',
+    url: 'https://example.com/p/jane/site',
   },
 });
 ```
@@ -116,14 +116,14 @@ Default stylesheet (equivalent to `getCSS()`).
 The package includes fonts and SVG logos under `static/`. Import them via the package exports:
 
 ```
-@singi-labs/academicpages-renderer/static/fonts/quattro-regular.woff2
-@singi-labs/academicpages-renderer/static/assets/sifa-logo.svg
+@singi-labs/sifa-pages-renderer/static/fonts/quattro-regular.woff2
+@singi-labs/sifa-pages-renderer/static/assets/sifa-logo.svg
 ```
 
 Or copy them to your build output:
 
 ```bash
-cp -r node_modules/@singi-labs/academicpages-renderer/static/* dist/
+cp -r node_modules/@singi-labs/sifa-pages-renderer/static/* dist/
 ```
 
 ## Data requirements
