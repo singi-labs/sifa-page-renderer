@@ -76,6 +76,12 @@ export interface RenderContext {
   /** Open Graph meta tags to inject into `<head>`. */
   og?: OpenGraphMeta;
   /**
+   * Canonical URL for the page. Emitted as `<link rel="canonical">` and used as
+   * the `url` in the Schema.org Person JSON-LD. Consolidates ranking signal when
+   * the same profile renders at multiple URLs (page.sifa.id, sifa.id, self-hosted).
+   */
+  canonical?: string;
+  /**
    * When true, renders all sections in a single HTML document with JS-based
    * section switching (nav links use hash fragments instead of .html files).
    * Used by server-rendered contexts like sifa-web where multi-page static
@@ -481,9 +487,66 @@ function ogTags(og?: OpenGraphMeta): string {
         og.description
       )}">`
     );
-  if (og.image)
+  if (og.image) {
     tags.push(`<meta name="twitter:image" content="${escapeHtml(og.image)}">`);
+    tags.push(`<meta name="twitter:card" content="summary_large_image">`);
+  }
   return tags.length ? "\n  " + tags.join("\n  ") : "";
+}
+
+/**
+ * Validate a URL's scheme (http/https only) and return it RAW (unescaped),
+ * for use in JSON contexts where JSON.stringify handles escaping. `safeUrl`
+ * is the HTML-attribute variant (escaped).
+ */
+function rawSafeUrl(url: string | undefined | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Schema.org `Person` JSON-LD for the profile. Emitted in `<head>` so search
+ * engines and agents get structured identity (name, url, image, links,
+ * location). Values are user-authored, so `<` is escaped to `<` to
+ * prevent a `</script>` breakout even though the block is not executable JS.
+ */
+function personJsonLd(profile: AcademicProfile, ctx?: RenderContext): string {
+  const name = profile.displayName ?? profile.handle;
+  if (!name) return "";
+
+  const sameAs = [
+    profile.website,
+    ...(profile.externalAccounts ?? []).map((a) => a.url),
+  ]
+    .filter((u): u is string => typeof u === "string" && u.length > 0)
+    .map((u) => rawSafeUrl(u))
+    .filter((u): u is string => u !== null);
+
+  const loc = locationLine(profile);
+  const person: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name,
+  };
+  if (ctx?.canonical) person.url = ctx.canonical;
+  if (profile.handle) person.alternateName = `@${profile.handle}`;
+  const avatar = rawSafeUrl(profile.avatar);
+  if (avatar) person.image = avatar;
+  if (profile.headline) person.jobTitle = profile.headline;
+  if (profile.about) person.description = profile.about;
+  if (loc) person.address = { "@type": "PostalAddress", addressLocality: loc };
+  if (sameAs.length) person.sameAs = Array.from(new Set(sameAs));
+
+  const json = JSON.stringify(person).replace(/</g, "\\u003c");
+  const nonceAttr = ctx?.nonce ? ` nonce="${escapeHtml(ctx.nonce)}"` : "";
+  return `\n  <script type="application/ld+json"${nonceAttr}>${json}</script>`;
 }
 
 function layout(opts: {
@@ -507,10 +570,23 @@ function layout(opts: {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)}</title>${
+    ctx?.og?.description
+      ? `\n  <meta name="description" content="${escapeHtml(
+          ctx.og.description
+        )}">`
+      : ""
+  }${
+    ctx?.canonical
+      ? `\n  <link rel="canonical" href="${escapeHtml(ctx.canonical)}">`
+      : ""
+  }
   <link rel="icon" href="${paths.favicon}" type="image/svg+xml">
   <link rel="preconnect" href="https://cdn.bsky.app">
-  <link rel="stylesheet" href="${paths.css}">${ogTags(ctx?.og)}
+  <link rel="stylesheet" href="${paths.css}">${ogTags(ctx?.og)}${personJsonLd(
+    profile,
+    ctx
+  )}
   <script${nonceAttr}>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 </head>
 <body>
