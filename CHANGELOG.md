@@ -1,5 +1,12 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.13
+
+### Patch Changes
+
+- 2ccadd4: Add `renderActivityPage(profile, sections, vms, ctx?, streamOptions?)`: a standalone activity ("Now") page that wraps `renderActivityStream` in the same masthead + sidebar + footer layout as the section pages. Adds a `ctx.activityStream` flag that injects a "Now" nav entry (masthead + mobile bottom nav, linking to `now.html`) into `renderHome`, `renderSectionPage`, and `renderSinglePage`; nav output is unchanged when the flag is omitted.
+- 7d33653: Always show the profile's Bluesky account in the sidebar. Every Sifa profile is an AT Protocol identity, so the handle is rendered unconditionally as an `@handle` link to `bsky.app/profile/<handle>` with the Bluesky icon, even when the user has not added it as an external account. A Bluesky link the user added by hand for the same profile collapses into this canonical entry rather than duplicating.
+
 ## 0.2.12
 
 ### Patch Changes
