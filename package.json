@@ -1,6 +1,6 @@
 {
   "name": "@singi-labs/sifa-page-renderer",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "Pure HTML renderer for personal sites driven by Sifa profile data. No framework, no filesystem -- import and call.",
   "license": "MIT",
   "type": "module",
