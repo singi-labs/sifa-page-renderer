@@ -391,6 +391,17 @@ function sidebar(profile: AcademicProfile): string {
     : "";
 
   const rawLinks = dedupeByUrl([
+    // Every Sifa user's identity is an AT Protocol/Bluesky account, so the
+    // handle is always their Bluesky handle -- surface it unconditionally as
+    // the identity anchor. Listed first so `dedupeByUrl` keeps this canonical
+    // "@handle" entry over any Bluesky link the user also added by hand.
+    handle
+      ? {
+          label: `@${handle}`,
+          platform: "bluesky",
+          url: `https://bsky.app/profile/${handle}`,
+        }
+      : null,
     profile.website
       ? { label: "Website", platform: "website", url: profile.website }
       : null,

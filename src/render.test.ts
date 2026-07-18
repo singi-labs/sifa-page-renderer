@@ -96,6 +96,42 @@ describe("isSidebarOnly", () => {
   });
 });
 
+describe("sidebar Bluesky identity link", () => {
+  it("always renders the user's Bluesky @handle, even with no account added", () => {
+    // PROFILE lists only a Website external account, no Bluesky.
+    const html = renderHome(PROFILE, []);
+    expect(html).toContain('href="https://bsky.app/profile/jane.bsky.social"');
+    expect(html).toContain("@jane.bsky.social");
+    // The Bluesky butterfly icon uses a distinct 600x530 viewBox.
+    expect(html).toContain('viewBox="0 0 600 530"');
+  });
+
+  it("does not duplicate when the profile already lists that Bluesky profile", () => {
+    const p: AcademicProfile = {
+      ...PROFILE,
+      externalAccounts: [
+        {
+          label: "Bluesky",
+          platform: "bluesky",
+          url: "https://bsky.app/profile/jane.bsky.social",
+        },
+      ],
+    };
+    const html = renderHome(p, []);
+    const occurrences =
+      html.split('href="https://bsky.app/profile/jane.bsky.social"').length - 1;
+    expect(occurrences).toBe(1);
+    // The canonical @handle label wins over a bare "Bluesky" label.
+    expect(html).toContain("@jane.bsky.social");
+  });
+
+  it("omits the Bluesky link when the profile has no handle", () => {
+    const p: AcademicProfile = { ...PROFILE, handle: null };
+    const html = renderHome(p, []);
+    expect(html).not.toContain("bsky.app/profile/");
+  });
+});
+
 describe("renderHome", () => {
   it("renders the About section with profile identity and default multi-page nav", () => {
     const html = renderHome(PROFILE, SECTIONS, { year: 2026 });
@@ -242,7 +278,8 @@ describe("sidebar icons", () => {
       []
     );
     const links = html.match(/<a class="side-link"[^>]*>.*?<\/a>/g) ?? [];
-    expect(links.length).toBe(2);
+    // 3 links: the always-on Bluesky @handle identity link, plus website + github.
+    expect(links.length).toBe(3);
     for (const a of links) {
       expect(a).toContain("side-link-icon");
       expect(a).toContain("side-link-label");
@@ -362,6 +399,9 @@ describe("sidebar links: dedupe by URL", () => {
     const html = renderHome(
       {
         ...PROFILE,
+        // No handle here, so the always-on Bluesky identity link doesn't
+        // count toward this URL-dedup assertion.
+        handle: null,
         website: "https://gui.do",
         externalAccounts: [{ label: "gui.do", url: "https://gui.do/" }],
       },
