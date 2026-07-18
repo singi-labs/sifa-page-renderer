@@ -775,3 +775,7 @@ export {
   isSidebarOnly,
   type ParsedSection,
 } from "./slug.js";
+export {
+  renderActivityStream,
+  type ActivityStreamOptions,
+} from "./activity.js";

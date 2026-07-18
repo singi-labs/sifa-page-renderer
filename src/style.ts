@@ -120,6 +120,54 @@ a { color:var(--link); }
 .prose .cv-taglist { list-style:none; padding-left:0; margin:0.35rem 0 0; display:flex; flex-wrap:wrap; gap:0.4rem; }
 .prose .cv-taglist li { margin:0; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:0.1rem 0.55rem; font-size:0.88em; }
 
+/* activity stream (renderActivityStream). Additive: no existing selector is
+   changed. Per-item theme colors arrive as the inline custom properties
+   --stream-card-bg / --stream-card-fg / --stream-accent, each falling back to
+   the site tokens when absent. */
+.activity-stream { display:flex; flex-direction:column; gap:1.75rem; margin:0.4rem 0 0; }
+.stream-empty { color:var(--muted); margin:0.4rem 0; }
+.stream-day { display:flex; flex-direction:column; gap:0.9rem; }
+.stream-day-label {
+  font-size:0.82rem; text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--muted); margin:0 0 0.1rem; font-weight:700;
+}
+.stream-card {
+  background:var(--stream-card-bg, var(--card)); color:var(--stream-card-fg, var(--fg));
+  border:1px solid var(--border); border-left:3px solid var(--stream-accent, var(--border));
+  border-radius:8px; padding:0.85rem 1rem;
+}
+.stream-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; }
+.stream-source {
+  display:inline-flex; align-items:center; font-size:0.74rem; font-weight:700;
+  color:var(--muted); background:var(--bg); border:1px solid var(--border);
+  border-radius:999px; padding:0.05rem 0.5rem;
+}
+.stream-time { color:var(--muted); font-size:0.8rem; }
+.stream-title { font-size:0.98rem; }
+.stream-title-link { color:inherit; text-decoration:none; }
+.stream-title-link:hover { color:var(--link); text-decoration:underline; }
+.stream-text { margin:0.4rem 0 0; word-break:break-word; }
+.stream-track { margin:0.4rem 0 0; font-weight:700; }
+.stream-media { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.6rem 0 0; }
+.stream-media-item { margin:0; flex:0 1 auto; }
+.stream-media-item img {
+  max-width:100%; max-height:280px; border-radius:6px; border:1px solid var(--border); display:block;
+}
+.stream-link {
+  display:flex; align-items:center; gap:0.6rem; margin:0.6rem 0 0;
+  border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem;
+  text-decoration:none; color:var(--fg);
+}
+.stream-link:hover { color:var(--link); }
+.stream-link-thumb { width:48px; height:48px; object-fit:cover; border-radius:4px; flex:0 0 auto; }
+.stream-link-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.stream-subject {
+  margin:0.6rem 0 0; padding:0.5rem 0.7rem; border-left:2px solid var(--border);
+  background:var(--bg); border-radius:0 6px 6px 0; font-size:0.92em;
+}
+.stream-subject .stream-card { border:none; border-radius:0; background:none; padding:0; }
+.stream-subject-handle { color:var(--muted); }
+
 .site-footer {
   max-width:1100px; margin:0 auto; padding:1.4rem 2.5rem 3rem; border-top:1px solid var(--border);
   display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem 1.5rem;

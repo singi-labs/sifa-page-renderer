@@ -90,6 +90,50 @@ Render a single section page (Career, Education, etc.). Returns a complete HTML 
 Render all sections in one document with hash-based nav, for server-rendered
 single-route hosts (e.g. sifa-web). Returns a complete HTML document.
 
+### `renderActivityStream(vms, options?): string`
+
+Render an activity stream to an HTML fragment (a `<section>`), from an array of
+`StreamCardVM` objects -- the same normalized view-model the sifa-web activity
+cards consume (produced by the SDK's `toStreamCardVM`). Both surfaces render the
+same VM, so page.sifa.id and sifa-web stay in lockstep without sharing a DOM.
+
+```typescript
+import { renderActivityStream } from '@singi-labs/sifa-page-renderer';
+import type { StreamCardVM } from '@singi-labs/sifa-sdk';
+
+const html = renderActivityStream(vms, {
+  // Optional. Build an image URL from a blob ref. Media may arrive already
+  // resolved ({ url }) or as a raw blob ref ({ did, cid }); the VM stays
+  // host-agnostic, so the host decides the CDN. Default: a Bluesky-style URL
+  // `${cdnBase}/img/feed_fullsize/plain/{did}/{cid}@jpeg`.
+  blobUrl: (did, cid) => `https://images.example/${did}/${cid}`,
+  cdnBase: 'https://cdn.bsky.app',       // base for the default blobUrl builder
+  permalink: (vm) => webUrlFor(vm),      // turn the at:// uri into a web link
+  groupByDay: true,                      // Today / Yesterday / date headers (UTC)
+  now: new Date(),                       // reference point for grouping + times
+  emptyText: 'No activity yet.',
+});
+```
+
+Options (all optional):
+
+- `blobUrl(did, cid): string | null | undefined` -- builds an image URL for
+  blob-ref media. Return `null` to skip. Default: `${cdnBase}/img/feed_fullsize/plain/{did}/{cid}@jpeg`.
+- `cdnBase: string` -- base for the default `blobUrl` builder. Default `https://cdn.bsky.app`.
+- `permalink(vm): string | null | undefined` -- the VM's `uri` is an `at://` URI,
+  not a web URL; return an http(s) URL to link the card title. Default: unlinked
+  (per-item permalinks are deferred).
+- `groupByDay: boolean` -- group items under Today / Yesterday / date headers
+  (UTC, deterministic for server rendering). Default `true`.
+- `now: Date` -- reference "now" for relative times and day grouping. Default `new Date()`.
+- `emptyText: string` -- shown when the stream is empty. Default `"No activity yet."`.
+
+All user-controlled strings are HTML-escaped and every URL is scheme-validated
+(http/https only), the same way the profile renderer handles profile data. The
+card body switches on `body.kind` (`text` | `media` | `link` | `track` |
+`generic`); unrecognized future kinds degrade to the text fallback. Style the
+output with the `.activity-stream` / `.stream-*` rules in `getCSS()`.
+
 ### `parseSections(md: string): ParsedSection[]`
 
 Parse a markdown string into `##`-keyed sections. Retained for consumers that
