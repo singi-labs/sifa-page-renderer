@@ -134,6 +134,45 @@ card body switches on `body.kind` (`text` | `media` | `link` | `track` |
 `generic`); unrecognized future kinds degrade to the text fallback. Style the
 output with the `.activity-stream` / `.stream-*` rules in `getCSS()`.
 
+### `renderActivityPage(profile, sections, vms, ctx?, streamOptions?): string`
+
+Render a standalone activity ("Now") page: the same masthead + sidebar + footer
+layout as `renderSectionPage`, with `renderActivityStream(vms, streamOptions)` as
+its main content. `vms` is an array of `StreamCardVM` (as consumed by
+`renderActivityStream`); `streamOptions` is forwarded verbatim. Returns a
+complete HTML document with `<title>Now - {name}</title>` and the "Now" nav item
+marked active. The page links to `now.html` (its nav slug is `now`), so a static
+build writes it as `dist/now.html`.
+
+```javascript
+import { renderActivityPage } from '@singi-labs/sifa-page-renderer';
+
+const nowHtml = renderActivityPage(profile, sections, vms, { year: 2026 }, {
+  permalink: (vm) => webUrlFor(vm),
+});
+// Write to dist/now.html
+```
+
+`renderActivityPage` forces the "Now" nav entry on for its own page. To surface
+that link on the home page and every section page too, set the
+`ctx.activityStream` flag on those calls (see below).
+
+### `ctx.activityStream` -- the "Now" nav flag
+
+`RenderContext` accepts an optional `activityStream` flag that injects the "Now"
+nav entry (masthead + mobile bottom nav) into `renderHome`, `renderSectionPage`,
+and `renderSinglePage`, linking to `now.html`. Pass `true` for the default "Now"
+label, or `{ label: 'Updates' }` to customize it. When omitted, the nav is
+byte-identical to a build without an activity page.
+
+```javascript
+const ctx = { year: 2026, activityStream: true };
+const indexHtml = renderHome(profile, sections, ctx);
+const careerHtml = renderSectionPage(profile, career, sections, ctx);
+const nowHtml = renderActivityPage(profile, sections, vms, ctx);
+// All three now share a nav with an active-on-now.html "Now" link.
+```
+
 ### `parseSections(md: string): ParsedSection[]`
 
 Parse a markdown string into `##`-keyed sections. Retained for consumers that

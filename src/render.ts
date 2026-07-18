@@ -21,6 +21,8 @@
 import { escapeHtml, safeUrl } from "./util.js";
 import { navIcon } from "./section-icons.js";
 import type { RenderedSection } from "./sections.js";
+import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
+import type { StreamCardVM } from "@singi-labs/sifa-sdk";
 
 // --- Public types -----------------------------------------------------------
 
@@ -96,6 +98,21 @@ export interface RenderContext {
    * script -- without it the nav and dark-mode toggle silently do nothing.
    */
   nonce?: string;
+  /**
+   * When set, injects a "Now" activity-stream nav item into every page's nav
+   * (masthead + mobile bottom nav) so the separate activity page rendered by
+   * {@link renderActivityPage} is reachable from the home page and each section
+   * page. Pass `true` for the default "Now" label, or an object to customize it.
+   * The entry links to `now.html` and is marked active only on the activity page.
+   * When omitted, the nav is byte-identical to a build without an activity page.
+   */
+  activityStream?: boolean | ActivityNavConfig;
+}
+
+/** Nav configuration for the activity ("Now") page. */
+export interface ActivityNavConfig {
+  /** Nav label + page title for the activity page. Default: `"Now"`. */
+  label?: string;
 }
 
 /** Path overrides for CSS, fonts, and static assets. */
@@ -261,18 +278,64 @@ function dedupeByUrl<T extends { url: string } | null>(entries: T[]): T[] {
   });
 }
 
-function navItems(
+/** Slug + filename stem for the activity ("Now") page. */
+const ACTIVITY_SLUG = "now";
+
+/** A single nav destination, shared by the masthead and mobile bottom nav. */
+interface NavEntry {
+  slug: string;
+  title: string;
+  /** Section id for the bottom-nav icon lookup (`navIcon`). */
+  iconId: string;
+  /** Pre-resolved href (hash in single-page mode, `.html` otherwise). */
+  href: string;
+}
+
+/**
+ * Resolve the optional activity-stream nav entry from the render context.
+ * Returns `undefined` (no entry) unless `ctx.activityStream` is truthy, keeping
+ * nav output byte-identical for builds without an activity page.
+ */
+function activityNavEntry(ctx?: RenderContext): NavEntry | undefined {
+  const cfg = ctx?.activityStream;
+  if (!cfg) return undefined;
+  const label = typeof cfg === "object" && cfg.label ? cfg.label : "Now";
+  // Always a real page link (never a single-page hash): the activity stream is
+  // a separate route, not one of the in-document `.page-section` blocks.
+  return {
+    slug: ACTIVITY_SLUG,
+    title: label,
+    iconId: ACTIVITY_SLUG,
+    href: `${ACTIVITY_SLUG}.html`,
+  };
+}
+
+/**
+ * Build the ordered nav entries: the profile sections, then the optional
+ * activity ("Now") entry. Section hrefs follow the single-page/hash convention;
+ * the activity entry always links to its own page.
+ */
+function navEntries(
   sections: RenderedSection[],
-  activeSlug: string,
-  singlePage?: boolean
-): string {
-  return sections
-    .map((s) => {
-      const href = singlePage ? `#${s.slug}` : `${s.slug}.html`;
-      const active = s.slug === activeSlug;
-      return `<a href="${href}"${
+  singlePage?: boolean,
+  activity?: NavEntry
+): NavEntry[] {
+  const base = sections.map<NavEntry>((s) => ({
+    slug: s.slug,
+    title: s.title,
+    iconId: s.id,
+    href: singlePage ? `#${s.slug}` : `${s.slug}.html`,
+  }));
+  return activity ? [...base, activity] : base;
+}
+
+function navItems(entries: NavEntry[], activeSlug: string): string {
+  return entries
+    .map((e) => {
+      const active = e.slug === activeSlug;
+      return `<a href="${e.href}"${
         active ? ' aria-current="page" class="active"' : ""
-      }>${escapeHtml(s.title)}</a>`;
+      }>${escapeHtml(e.title)}</a>`;
     })
     .join("\n");
 }
@@ -287,34 +350,28 @@ const BOTTOM_NAV_SLOTS = 5;
  * `BOTTOM_NAV_SLOTS - 1` show in the bar and the rest move into a "More" bottom
  * sheet. Icons come from `navIcon(section.id)`.
  */
-function bottomNav(
-  sections: RenderedSection[],
-  activeSlug: string,
-  singlePage?: boolean
-): string {
-  if (sections.length === 0) return "";
-  const hrefOf = (s: RenderedSection) =>
-    singlePage ? `#${s.slug}` : `${s.slug}.html`;
-  const link = (s: RenderedSection, cls: string) => {
-    const active = s.slug === activeSlug;
+function bottomNav(entries: NavEntry[], activeSlug: string): string {
+  if (entries.length === 0) return "";
+  const link = (e: NavEntry, cls: string) => {
+    const active = e.slug === activeSlug;
     return (
-      `<a class="${cls}${active ? " active" : ""}" href="${hrefOf(
-        s
-      )}" data-slug="${escapeHtml(s.slug)}"` +
+      `<a class="${cls}${active ? " active" : ""}" href="${
+        e.href
+      }" data-slug="${escapeHtml(e.slug)}"` +
       `${active ? ' aria-current="page"' : ""}>${navIcon(
-        s.id
-      )}<span>${escapeHtml(s.title)}</span></a>`
+        e.iconId
+      )}<span>${escapeHtml(e.title)}</span></a>`
     );
   };
 
-  if (sections.length <= BOTTOM_NAV_SLOTS) {
-    return `<nav class="bottom-nav" aria-label="Sections">${sections
+  if (entries.length <= BOTTOM_NAV_SLOTS) {
+    return `<nav class="bottom-nav" aria-label="Sections">${entries
       .map((s) => link(s, "bnav-item"))
       .join("")}</nav>`;
   }
 
-  const primary = sections.slice(0, BOTTOM_NAV_SLOTS - 1);
-  const overflow = sections.slice(BOTTOM_NAV_SLOTS - 1);
+  const primary = entries.slice(0, BOTTOM_NAV_SLOTS - 1);
+  const overflow = entries.slice(BOTTOM_NAV_SLOTS - 1);
   const overflowActive = overflow.some((s) => s.slug === activeSlug);
   const bar =
     primary.map((s) => link(s, "bnav-item")).join("") +
@@ -341,17 +398,15 @@ function bottomNav(
 // --- render: masthead (top nav) --------------------------------------------
 
 function masthead(
-  sections: RenderedSection[],
+  entries: NavEntry[],
   activeSlug: string,
-  paths: Required<RenderPaths>,
-  singlePage?: boolean
+  paths: Required<RenderPaths>
 ): string {
   return `<header class="masthead">
   <div class="masthead-inner">
     <nav class="top-nav">${navItems(
-      sections,
-      activeSlug,
-      singlePage
+      entries,
+      activeSlug
     )}\n    </nav>
     <div class="masthead-actions">
       <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" type="button">${svgSun()}${svgMoon()}</button>
@@ -564,6 +619,11 @@ function layout(opts: {
   const year = ctx?.year ?? "";
   const updated = ctx?.updated ?? "";
   const nonceAttr = ctx?.nonce ? ` nonce="${escapeHtml(ctx.nonce)}"` : "";
+  const entries = navEntries(
+    sections,
+    ctx?.singlePage,
+    activityNavEntry(ctx)
+  );
 
   return `<!doctype html>
 <html lang="en">
@@ -590,7 +650,7 @@ function layout(opts: {
   <script${nonceAttr}>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 </head>
 <body>
-  ${masthead(sections, activeSlug, paths, ctx?.singlePage)}
+  ${masthead(entries, activeSlug, paths)}
   <div class="shell">
     ${sidebar(profile)}
     <main class="main">
@@ -626,9 +686,9 @@ ${main}
       <a href="https://github.com/singi-labs/sifa-page">Self-host your own Sifa ID-driven page like this</a>
     </div>
   </footer>
-  ${bottomNav(sections, activeSlug, ctx?.singlePage)}
+  ${bottomNav(entries, activeSlug)}
   <script${nonceAttr}>document.getElementById('theme-toggle').addEventListener('click',function(){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t);}catch(e){}});</script>${
-    sections.length > BOTTOM_NAV_SLOTS ? bottomNavScript(nonceAttr) : ""
+    entries.length > BOTTOM_NAV_SLOTS ? bottomNavScript(nonceAttr) : ""
   }${ctx?.singlePage ? singlePageScript(nonceAttr) : ""}
 </body>
 </html>
@@ -755,6 +815,43 @@ export function renderSinglePage(
     activeSlug: "index",
     main,
     ctx: { ...ctx, singlePage: true },
+  });
+}
+
+/**
+ * Render the activity ("Now") page: the same masthead + sidebar + footer layout
+ * as the section pages, with the activity stream as its main content. The stream
+ * itself is produced by {@link renderActivityStream} (see `./activity.ts`), so
+ * page.sifa.id and sifa-web render the same view-model.
+ *
+ * The activity nav entry is shown active on this page and injected across the
+ * whole nav: it forces `ctx.activityStream` on (defaulting to the "Now" label)
+ * so the masthead + bottom nav always surface the link, even if the caller
+ * didn't set the flag. `streamOptions` is forwarded verbatim to
+ * {@link renderActivityStream} (blob URLs, permalinks, grouping, empty text).
+ */
+export function renderActivityPage(
+  profile: AcademicProfile,
+  sections: RenderedSection[],
+  vms: StreamCardVM[],
+  ctx?: RenderContext,
+  streamOptions?: ActivityStreamOptions
+): string {
+  const cfg = ctx?.activityStream;
+  const label = typeof cfg === "object" && cfg.label ? cfg.label : "Now";
+  const main = `
+    <h2 class="page-title">${escapeHtml(label)}</h2>
+${renderActivityStream(vms, streamOptions)}
+  `;
+  return layout({
+    title: `${label} - ${profile.displayName ?? profile.handle ?? "Profile"}`,
+    profile,
+    sections,
+    activeSlug: ACTIVITY_SLUG,
+    // Ensure the "Now" nav entry appears on its own page even when the caller
+    // didn't set the flag; preserve a custom label/config if they did.
+    ctx: { ...ctx, activityStream: cfg ?? true },
+    main,
   });
 }
 
