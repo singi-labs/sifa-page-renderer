@@ -64,21 +64,13 @@ export function categoryGlyph(appId: string): string {
   return (category && CATEGORY_GLYPHS[category]) || DEFAULT_GLYPH;
 }
 
-/** Popfeed — P-shaped speech bubble with a star cutout (even-odd fill).
- *  Extracted from sifa-web's `popfeed-logo.tsx`. */
-const POPFEED_LOGO =
-  `<svg viewBox="0 0 96 112" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" aria-hidden="true">` +
-  `<path d="M 50,0 A 44,44 0 1 1 18.9,75.1 L 4,110 L 8.7,59.1 A 44,44 0 0 1 50,0 Z"/>` +
-  `<path d="M 52,24 L 56.4,35.9 L 69.1,36.4 L 59.1,44.3 L 62.6,56.6 L 52,49.5 L 41.4,56.6 L 44.9,44.3 L 34.9,36.4 L 47.6,35.9 Z"/>` +
-  `</svg>`;
-
 /**
- * Brand logos for single-writer apps, keyed by appId. When an app is not in
- * this map its card icon falls back to the category glyph.
+ * Brand logos for single-writer apps, keyed by appId. Empty for now: every card
+ * icon uses the category glyph. Real brand marks can be added here later, but
+ * only from an app's actual SVG source (never redrawn from memory), so we don't
+ * ship inaccurate logos.
  */
-export const APP_BRAND_LOGOS: Record<string, string> = {
-  popfeed: POPFEED_LOGO,
-};
+export const APP_BRAND_LOGOS: Record<string, string> = {};
 
 /**
  * The top-left card icon for an app: its brand logo when we ship one, otherwise

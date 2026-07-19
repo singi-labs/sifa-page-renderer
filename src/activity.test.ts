@@ -55,7 +55,7 @@ describe("renderActivityStream: app icons", () => {
     expect(html).not.toContain("M 50,0 A 44,44");
   });
 
-  it("gives a popfeed item its brand logo as the card icon", () => {
+  it("gives a popfeed item a category-glyph card icon (no brand logos shipped)", () => {
     const html = renderActivityStream(
       [
         vm({
@@ -65,7 +65,8 @@ describe("renderActivityStream: app icons", () => {
       { now: NOW }
     );
     expect(html).toContain('class="stream-card-icon"');
-    expect(html).toContain("M 50,0 A 44,44");
+    // No brand marks are shipped, so the old popfeed path must not appear.
+    expect(html).not.toContain("M 50,0 A 44,44");
   });
 
   it("renders a glyph before the app name inside the source pill", () => {

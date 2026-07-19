@@ -694,7 +694,6 @@ function sidebar(profile: AcademicProfile): string {
   return `<aside class="sidebar">
   ${avatar}
   <h1 class="sidebar-name">${escapeHtml(name)}</h1>
-  ${handle ? `<p class="sidebar-handle">@${escapeHtml(handle)}</p>` : ""}
   ${headline}
   ${locHtml}
   ${linksHtml}

@@ -6,20 +6,16 @@ import {
   pillGlyph,
 } from "./app-icons";
 
-// A path fragment unique to the extracted Popfeed brand mark.
-const POPFEED_MARKER = "M 50,0 A 44,44";
-
 describe("app-icons: cardIcon", () => {
-  it("uses the brand logo for a single-writer app (popfeed)", () => {
-    const html = cardIcon("popfeed");
-    expect(html).toContain(POPFEED_MARKER);
-    expect(html).toContain("viewBox=\"0 0 96 112\"");
+  it("uses the category glyph for every app (no brand logos shipped)", () => {
+    expect(APP_BRAND_LOGOS).toEqual({});
+    // popfeed is categorized as Reviews -> the star glyph, not a brand mark.
+    expect(cardIcon("popfeed")).toBe(categoryGlyph("popfeed"));
   });
 
-  it("falls through to a category glyph for shared bsky posts (no bluesky brand logo)", () => {
+  it("falls through to a category glyph for shared bsky posts", () => {
     const html = cardIcon("bluesky");
-    // bluesky is categorized as Posts -> the speech-bubble glyph, NOT a brand logo.
-    expect(html).not.toContain(POPFEED_MARKER);
+    // bluesky is categorized as Posts -> the speech-bubble glyph.
     expect(html).toBe(categoryGlyph("bluesky"));
     expect(APP_BRAND_LOGOS.bluesky).toBeUndefined();
   });
