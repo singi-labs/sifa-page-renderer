@@ -26,9 +26,11 @@ export function getCSS(opts?: CSSOptions): string {
 
 :root, [data-theme="light"] {
   --bg:#fffcf0; --fg:#1c1b1a; --muted:#6b6862; --border:#e4e0d6; --card:#fff; --link:#2a5db0;
+  --star:#c99700; --diff-add:#1a7f37; --diff-del:#cf222e; --verified:#1a7f37;
 }
 [data-theme="dark"] {
   --bg:#181714; --fg:#f0ede2; --muted:#a59f93; --border:#34322b; --card:#232118; --link:#9db8f8;
+  --star:#e3b341; --diff-add:#3fb950; --diff-del:#f85149; --verified:#3fb950;
 }
 * { box-sizing:border-box; }
 html { color-scheme: light dark; }
@@ -142,10 +144,11 @@ a { color:var(--link); }
   color:var(--muted); background:var(--bg); border:1px solid var(--border);
   border-radius:999px; padding:0.05rem 0.5rem;
 }
-.stream-time { color:var(--muted); font-size:0.8rem; }
-.stream-title { font-size:0.98rem; }
-.stream-title-link { color:inherit; text-decoration:none; }
-.stream-title-link:hover { color:var(--link); text-decoration:underline; }
+.stream-time { color:var(--muted); font-size:0.8rem; margin-left:auto; }
+/* The verb is metadata, not content: muted + small, set apart from post text. */
+.stream-verb { color:var(--muted); font-size:0.82rem; }
+.stream-verb-link { color:var(--muted); text-decoration:none; }
+.stream-verb-link:hover { color:var(--link); text-decoration:underline; }
 .stream-text { margin:0.4rem 0 0; word-break:break-word; }
 .stream-track { margin:0.4rem 0 0; font-weight:700; }
 .stream-media { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.6rem 0 0; }
@@ -167,6 +170,59 @@ a { color:var(--link); }
 }
 .stream-subject .stream-card { border:none; border-radius:0; background:none; padding:0; }
 .stream-subject-handle { color:var(--muted); }
+
+/* rich typed cards (media-review, book, github-pr, event-rsvp, verification,
+   membership, location, travel, standard-site). Structured data laid out with
+   an optional leading cover image, mirroring the sifa-web /activity cards. */
+.stream-rich { display:flex; gap:0.75rem; margin:0.5rem 0 0; }
+.stream-rich-main { min-width:0; flex:1 1 auto; }
+.stream-rich-card {
+  flex-direction:column; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.stream-rich-card .stream-rich-main { padding:0.75rem 0.85rem; }
+.stream-cover { margin:0; flex:0 0 auto; }
+.stream-cover img {
+  width:72px; height:auto; max-height:108px; object-fit:cover; border-radius:6px;
+  border:1px solid var(--border); display:block;
+}
+.stream-cover-wide { width:100%; }
+.stream-cover-wide img { width:100%; max-height:none; aspect-ratio:16/9; border-radius:0; border:none; }
+.stream-rich-title { margin:0.1rem 0 0; font-weight:700; word-break:break-word; }
+.stream-rich-title-text { font-weight:700; }
+.stream-rich-meta { margin:0.2rem 0 0; color:var(--muted); font-size:0.86rem; word-break:break-word; }
+.stream-rich-text { margin:0.35rem 0 0; color:var(--muted); word-break:break-word; }
+.stream-rich-link { color:var(--link); text-decoration:none; }
+.stream-rich-link:hover { text-decoration:underline; }
+.stream-rich-stats { margin:0.3rem 0 0; display:flex; flex-wrap:wrap; gap:0.75rem; font-size:0.85rem; }
+
+.stream-badge {
+  display:inline-flex; align-items:center; margin:0.25rem 0.35rem 0 0; font-size:0.74rem;
+  background:var(--bg); border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.5rem;
+}
+.stream-badge-quiet { color:var(--muted); }
+.stream-badge-verified { color:var(--verified); border-color:var(--verified); }
+
+.stream-stars {
+  display:inline-flex; align-items:center; gap:0.35rem; margin:0.3rem 0 0; font-size:0.86rem;
+}
+.stream-stars-glyph { color:var(--star); letter-spacing:0.05em; }
+.stream-rating { color:var(--muted); }
+
+.stream-repo { font-weight:700; }
+.stream-pr-num { color:var(--muted); }
+.stream-lang { display:inline-flex; align-items:center; gap:0.35rem; color:var(--muted); }
+.stream-lang-dot {
+  display:inline-block; width:0.65rem; height:0.65rem; border-radius:999px;
+  background:var(--lang-dot, var(--muted));
+}
+.stream-diff-add { color:var(--diff-add); font-weight:700; margin-right:0.5rem; }
+.stream-diff-del { color:var(--diff-del); font-weight:700; }
+
+.stream-publisher {
+  display:inline-flex; align-items:center; gap:0.4rem; margin:0.5rem 0 0; font-size:0.85rem; color:var(--muted);
+}
+.stream-pub-icon { width:1.1rem; height:1.1rem; border-radius:999px; object-fit:cover; }
+.stream-pub-name { font-weight:600; }
 
 .site-footer {
   max-width:1100px; margin:0 auto; padding:1.4rem 2.5rem 3rem; border-top:1px solid var(--border);

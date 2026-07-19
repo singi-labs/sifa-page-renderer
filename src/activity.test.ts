@@ -80,9 +80,9 @@ describe("renderActivityStream: body kinds", () => {
   });
 
   it("unknown/future body kind: degrades to the text fallback, never throws", () => {
-    const future = { kind: "github-pr", text: "opened a PR" } as unknown as StreamCardVM["body"];
+    const future = { kind: "future-thing", text: "did something new" } as unknown as StreamCardVM["body"];
     const html = renderActivityStream([vm({ body: future })], { now: NOW });
-    expect(html).toContain("opened a PR");
+    expect(html).toContain("did something new");
     expect(html).toContain('class="stream-card"');
   });
 });
@@ -260,10 +260,11 @@ describe("renderActivityStream: permalink injection", () => {
     );
   });
 
-  it("leaves the title unlinked by default (per-item permalinks deferred)", () => {
+  it("leaves the verb unlinked by default (per-item permalinks deferred)", () => {
     const html = renderActivityStream([vm()], { now: NOW });
     expect(html).toContain("posted on Bluesky");
-    expect(html).not.toContain("<a class=\"stream-title-link\"");
+    expect(html).not.toContain("stream-verb-link");
+    expect(html).toContain('<span class="stream-verb">posted on Bluesky</span>');
   });
 });
 
@@ -339,5 +340,404 @@ describe("renderActivityStream: XSS / escaping", () => {
       { now: NOW }
     );
     expect(html).not.toContain('onerror="alert(1)"');
+  });
+});
+
+describe("renderActivityStream: verb in the meta line", () => {
+  it("renders the verb inside the meta row (stream-head), set apart from post text", () => {
+    const html = renderActivityStream(
+      [vm({ title: "posted on Bluesky", body: { kind: "text", text: "hello world" } })],
+      { now: NOW }
+    );
+    // The verb sits in the head next to the source pill + time...
+    expect(html).toContain(
+      '<div class="stream-head"><span class="stream-source" data-color="blue">Bluesky</span><span class="stream-verb">posted on Bluesky</span>'
+    );
+    // ...and there is no longer a separate title line.
+    expect(html).not.toContain('class="stream-title"');
+    // The post text is a distinct content element, not the verb.
+    expect(html).toContain('<p class="stream-text">hello world</p>');
+  });
+
+  it("links the verb to the item permalink when supplied", () => {
+    const html = renderActivityStream([vm()], {
+      now: NOW,
+      permalink: (item) => `https://page.sifa.id/gui.do/p/${item.cid}`,
+    });
+    expect(html).toContain(
+      '<a class="stream-verb stream-verb-link" href="https://page.sifa.id/gui.do/p/bafycid1">'
+    );
+  });
+});
+
+describe("renderActivityStream: rich typed variants", () => {
+  it("media-review: verb 'Reviewed a TV show', work title, star rating, credit, review, cover", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "popfeed", label: "Popfeed", color: "grass" },
+          title: "reviewed on Popfeed",
+          media: [{ url: "https://cdn.example/sugar-poster.jpg", alt: "Sugar poster" }],
+          body: {
+            kind: "media-review",
+            reviewKind: "review",
+            title: "Sugar",
+            mediaType: "tv_show",
+            rating: 9,
+            mainCredit: "Apple TV",
+            reviewText: "A stylish neo-noir.",
+            isRevisit: false,
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Reviewed a TV show</span>');
+    expect(html).toContain("Sugar");
+    expect(html).toContain("9/10");
+    expect(html).toContain("Apple TV");
+    expect(html).toContain("A stylish neo-noir.");
+    expect(html).toContain('src="https://cdn.example/sugar-poster.jpg"');
+    // The media pill uses the display-cased label.
+    expect(html).toContain("TV Show");
+  });
+
+  it("media-review: 'Posted about a movie' with a Revisit badge", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "posted on Popfeed",
+          body: {
+            kind: "media-review",
+            reviewKind: "post",
+            title: "Heat",
+            mediaType: "movie",
+            isRevisit: true,
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Posted about a movie</span>');
+    expect(html).toContain("Revisit");
+  });
+
+  it("book: verb 'Reviewed a book', title, authors, stars, status badge, review", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "bookhive", label: "BookHive", color: "amber" },
+          title: "read on BookHive",
+          media: [{ url: "https://cdn.example/dune.jpg", alt: "Dune cover" }],
+          body: {
+            kind: "book",
+            title: "Dune",
+            authors: ["Frank Herbert"],
+            stars: 10,
+            status: "buzz.bookhive.defs#finished",
+            review: "A desert epic.",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Reviewed a book</span>');
+    expect(html).toContain("Dune");
+    expect(html).toContain("Frank Herbert");
+    expect(html).toContain("10/10");
+    expect(html).toContain("Finished");
+    expect(html).toContain("A desert epic.");
+    expect(html).toContain('src="https://cdn.example/dune.jpg"');
+  });
+
+  it("book: falls back to the SDK verb (no review) and shows the reading status", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "Read",
+          body: {
+            kind: "book",
+            title: "The Hobbit",
+            authors: ["J.R.R. Tolkien"],
+            status: "buzz.bookhive.defs#reading",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Read</span>');
+    expect(html).toContain("Reading");
+  });
+
+  it("github-pr: repo, PR number, title, additions/deletions, language dot", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "github", label: "GitHub", color: "slate" },
+          title: "opened a pull request",
+          body: {
+            kind: "github-pr",
+            repoOwner: "singi-labs",
+            repoName: "sifa-sdk",
+            prNumber: 294,
+            title: "Add stream card body types",
+            language: "TypeScript",
+            additions: 420,
+            deletions: 12,
+            mergedAt: "2026-07-16T09:00:00.000Z",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Merged a pull request</span>');
+    expect(html).toContain("singi-labs/sifa-sdk");
+    expect(html).toContain("#294");
+    expect(html).toContain("Add stream card body types");
+    expect(html).toContain("+420");
+    expect(html).toContain("-12");
+    expect(html).toContain("TypeScript");
+    expect(html).toContain("--lang-dot:#3178c6");
+  });
+
+  it("github-pr: unmerged PR uses the 'Opened a pull request' verb", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "opened a pull request",
+          body: {
+            kind: "github-pr",
+            repoOwner: "a",
+            repoName: "b",
+            prNumber: 1,
+            title: "wip",
+            additions: 0,
+            deletions: 0,
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Opened a pull request</span>');
+  });
+
+  it("event-rsvp: verb from status, event name, date range, location, mode", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "smokesignal", label: "Smoke Signal", color: "orange" },
+          title: "RSVP'd on Smoke Signal",
+          body: {
+            kind: "event-rsvp",
+            rsvpStatus: "going",
+            eventName: "ATProto Meetup",
+            startsAt: "2026-08-04T18:00:00.000Z",
+            endsAt: "2026-08-06T21:00:00.000Z",
+            mode: "inperson",
+            locationName: "The Commons",
+            locationLocality: "Amsterdam",
+            locationCountry: "NL",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Going to an event</span>');
+    expect(html).toContain("ATProto Meetup");
+    expect(html).toContain("Aug 4-6");
+    expect(html).toContain("The Commons, Amsterdam, NL");
+    expect(html).toContain("In-person");
+  });
+
+  it("verification: 'Verified GitHub' with subject and a verified badge", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "keytrace", label: "Keytrace", color: "violet" },
+          title: "verified an identity",
+          body: {
+            kind: "verification",
+            platform: "github",
+            verified: true,
+            subjectLabel: "octocat",
+            profileUrl: "https://github.com/octocat",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Verified GitHub</span>');
+    expect(html).toContain("octocat");
+    expect(html).toContain('href="https://github.com/octocat"');
+    expect(html).toContain("Verified");
+  });
+
+  it("verification: Bluesky verification renders the handle", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "bluesky", label: "Bluesky", color: "blue" },
+          title: "verified an account",
+          body: {
+            kind: "verification",
+            platform: "bluesky",
+            verified: true,
+            subjectLabel: "Alice",
+            handle: "alice.bsky.social",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Verified Bluesky</span>');
+    expect(html).toContain("Alice @alice.bsky.social");
+  });
+
+  it("membership: 'Joined {community}' verb and the description", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "colibri", label: "Colibri", color: "teal" },
+          title: "joined a community",
+          body: {
+            kind: "membership",
+            communityName: "AT Protocol Builders",
+            description: "A place for people building on atproto.",
+            communityUri: "at://did:plc:x/community/1",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('<span class="stream-verb">Joined AT Protocol Builders</span>');
+    expect(html).toContain("A place for people building on atproto.");
+  });
+
+  it("location: venue, shout, and a formatted address", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "beaconbits", label: "BeaconBits", color: "pink" },
+          title: "checked in",
+          body: {
+            kind: "location",
+            venueName: "Café de Sluyswacht",
+            shout: "Great coffee by the canal.",
+            address: { locality: "Amsterdam", region: "NH", country: "Netherlands" },
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("Café de Sluyswacht");
+    expect(html).toContain("Great coffee by the canal.");
+    expect(html).toContain("Amsterdam, NH, Netherlands");
+  });
+
+  it("location: falls back to geo coordinates when there is no address", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "checked in",
+          body: {
+            kind: "location",
+            venueName: "A spot",
+            geo: { latitude: 52.3676, longitude: 4.9041 },
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("52.3676, 4.9041");
+  });
+
+  it("travel: origin to destination, transportation, carrier, dates", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "passports", label: "Passports", color: "cyan" },
+          title: "logged a trip",
+          body: {
+            kind: "travel",
+            origin: "AMS",
+            destination: "JFK",
+            transportation: "flight",
+            carrier: "KLM",
+            startDate: "2026-08-01",
+            endDate: "2026-08-10",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("AMS → JFK");
+    expect(html).toContain("Flight · KLM");
+    expect(html).toContain("2026-08-01 – 2026-08-10");
+  });
+
+  it("standard-site: title, description, publisher, reading time, cover", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "leaflet", label: "Leaflet", color: "lime" },
+          title: "published a document",
+          body: {
+            kind: "standard-site",
+            title: "On Decentralized Identity",
+            description: "Why portable identity matters.",
+            siteUrl: "https://example.pub",
+            path: "/posts/identity",
+            publisherName: "Example Pub",
+            coverImageUrl: "https://cdn.example/cover.jpg",
+            readingTime: 7,
+            publishedAt: "2026-07-10T00:00:00.000Z",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("On Decentralized Identity");
+    expect(html).toContain("Why portable identity matters.");
+    expect(html).toContain("Example Pub");
+    expect(html).toContain("7 min read");
+    expect(html).toContain("July 10, 2026");
+    expect(html).toContain('src="https://cdn.example/cover.jpg"');
+    expect(html).toContain('href="https://example.pub/posts/identity"');
+  });
+
+  it("gracefully omits missing optional fields (no 'undefined' leaks)", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "read on BookHive",
+          body: { kind: "book", title: "Untitled", authors: [] },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("Untitled");
+    expect(html).not.toContain("undefined");
+    expect(html).not.toContain("/10"); // no rating rendered
+  });
+
+  it("escapes a malicious rich field (book review) rather than injecting markup", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "read on BookHive",
+          body: {
+            kind: "book",
+            title: '<img src=x onerror=alert(1)>',
+            authors: ["A"],
+            review: "<script>alert(2)</script>",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).not.toContain("<img src=x onerror=alert(1)>");
+    expect(html).not.toContain("<script>alert(2)</script>");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).toContain("&lt;script&gt;alert(2)&lt;/script&gt;");
   });
 });

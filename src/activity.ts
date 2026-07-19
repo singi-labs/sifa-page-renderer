@@ -32,6 +32,27 @@ const DEFAULT_CDN_BASE = "https://cdn.bsky.app";
 /** One day in milliseconds, for the "Yesterday" boundary. */
 const DAY_MS = 86_400_000;
 
+/**
+ * Body kinds that carry structured, app-specific data and get a bespoke rich
+ * layout (mirroring the sifa-web `/activity` cards). For these, the generic
+ * `media` / `externalLink` chrome is suppressed — the rich renderer owns the
+ * whole content area (including any cover image).
+ */
+const RICH_KINDS: ReadonlySet<StreamCardBody["kind"]> = new Set([
+  "github-pr",
+  "book",
+  "media-review",
+  "event-rsvp",
+  "verification",
+  "membership",
+  "location",
+  "travel",
+  "standard-site",
+]);
+
+/** Narrow the {@link StreamCardBody} union to a single `kind`. */
+type BodyOf<K extends StreamCardBody["kind"]> = Extract<StreamCardBody, { kind: K }>;
+
 /** Options for {@link renderActivityStream}. */
 export interface ActivityStreamOptions {
   /**
@@ -115,26 +136,125 @@ function renderCard(
   const time = `<time class="stream-time" datetime="${escapeHtml(
     item.timestamp
   )}">${escapeHtml(formatRelativeTime(item.timestamp))}</time>`;
-  const head = `<div class="stream-head">${source}${time}</div>`;
-  const title = `<div class="stream-title">${renderTitle(item, ctx)}</div>`;
-  const body = renderBody(item.body);
-  const media = renderMedia(item.media, ctx.resolveBlob);
-  const link = renderExternalLink(item.externalLink);
+  // The verb/action is metadata, not content: it lives in the meta row next to
+  // the source pill + time, styled apart from the post body.
+  const head = `<div class="stream-head">${source}${renderVerb(item, ctx)}${time}</div>`;
+  const isRich = item.body ? RICH_KINDS.has(item.body.kind) : false;
+  const body = renderBody(item, ctx);
+  // Rich variants render their own cover/link inside the body; suppress the
+  // generic chrome so we don't double-render an image or link.
+  const media = isRich ? "" : renderMedia(item.media, ctx.resolveBlob);
+  const link = isRich ? "" : renderExternalLink(item.externalLink);
   // Depth-limit the nested repost/reply target so a cyclic `subject` cannot
   // recurse forever; one level of nesting is enough for the personal-site view.
   const subject = depth < 1 ? renderSubject(item.subject, ctx, depth) : "";
 
   return `<article class="stream-card" data-uri="${escapeHtml(
     item.uri
-  )}"${styleAttr}>${head}${title}${body}${media}${link}${subject}</article>`;
+  )}"${styleAttr}>${head}${body}${media}${link}${subject}</article>`;
 }
 
-function renderTitle(item: StreamCardVM, ctx: StreamRenderCtx): string {
-  const text = escapeHtml(item.title);
+/**
+ * The meta-row verb: a per-variant action phrase (e.g. "Reviewed a TV show",
+ * "Merged a pull request"), falling back to the SDK's verb-aware `title` when a
+ * variant has no better phrasing. Linked to the item permalink when supplied.
+ */
+function renderVerb(item: StreamCardVM, ctx: StreamRenderCtx): string {
+  const text = escapeHtml(cardVerb(item));
   const href = ctx.permalink ? safeUrl(ctx.permalink(item) ?? null) : null;
   return href
-    ? `<a class="stream-title-link" href="${href}">${text}</a>`
-    : `<span class="stream-title-text">${text}</span>`;
+    ? `<a class="stream-verb stream-verb-link" href="${href}">${text}</a>`
+    : `<span class="stream-verb">${text}</span>`;
+}
+
+/**
+ * Compute the plain-text verb phrase for a card. Returns raw text; the caller
+ * escapes it. Reads like the corresponding sifa-web card's header.
+ */
+function cardVerb(item: StreamCardVM): string {
+  const body = item.body;
+  if (!body) return item.title;
+  switch (body.kind) {
+    case "media-review":
+      return mediaReviewVerb(body);
+    case "book":
+      return body.review && body.review.trim() ? "Reviewed a book" : item.title;
+    case "github-pr":
+      return body.mergedAt ? "Merged a pull request" : "Opened a pull request";
+    case "event-rsvp":
+      return rsvpVerb(body.rsvpStatus, item.title);
+    case "verification":
+      return `Verified ${platformLabel(body.platform)}`;
+    case "membership":
+      return body.communityName ? `Joined ${body.communityName}` : "Joined a community";
+    default:
+      return item.title;
+  }
+}
+
+/** Humanized noun phrase for a creative-work type, used inside the verb. */
+const MEDIA_TYPE_PHRASES: Record<string, string> = {
+  movie: "movie",
+  tv_show: "TV show",
+  book: "book",
+  video_game: "game",
+  music: "music",
+  album: "album",
+};
+
+/** Display label for a creative-work type (media pill in the rich body). */
+const MEDIA_TYPE_LABELS: Record<string, string> = {
+  movie: "Movie",
+  tv_show: "TV Show",
+  book: "Book",
+  video_game: "Game",
+  music: "Music",
+  album: "Album",
+};
+
+function mediaTypePhrase(mediaType: string | undefined): string | null {
+  if (!mediaType) return null;
+  return MEDIA_TYPE_PHRASES[mediaType] ?? mediaType.replace(/_/g, " ").toLowerCase();
+}
+
+function mediaReviewVerb(body: BodyOf<"media-review">): string {
+  const action =
+    body.reviewKind === "review"
+      ? "Reviewed"
+      : body.reviewKind === "note"
+        ? "Noted on"
+        : "Posted about";
+  const phrase = mediaTypePhrase(body.mediaType);
+  return phrase ? `${action} a ${phrase}` : action;
+}
+
+function rsvpVerb(status: BodyOf<"event-rsvp">["rsvpStatus"], fallback: string): string {
+  switch (status) {
+    case "going":
+      return "Going to an event";
+    case "interested":
+      return "Interested in an event";
+    case "notgoing":
+      return "Not going to an event";
+    default:
+      return fallback;
+  }
+}
+
+/** Verification platform display labels (keytrace claim types + `bluesky`). */
+const PLATFORM_LABELS: Record<string, string> = {
+  dns: "Domain",
+  github: "GitHub",
+  linkedin: "LinkedIn",
+  tangled: "Tangled",
+  bluesky: "Bluesky",
+  mastodon: "Mastodon",
+  twitter: "Twitter/X",
+  website: "Website",
+};
+
+function platformLabel(platform: string): string {
+  return PLATFORM_LABELS[platform] ?? platform;
 }
 
 /**
@@ -161,7 +281,8 @@ function themeStyle(theme: StreamTheme | undefined): string {
 
 // --- body (discriminated union) --------------------------------------------
 
-function renderBody(body: StreamCardBody | undefined): string {
+function renderBody(item: StreamCardVM, ctx: StreamRenderCtx): string {
+  const body = item.body;
   if (!body) return "";
   switch (body.kind) {
     case "text":
@@ -178,9 +299,27 @@ function renderBody(body: StreamCardBody | undefined): string {
     case "link":
     case "generic":
       return body.text ? paragraph(body.text) : "";
+    case "github-pr":
+      return renderGithubPr(body);
+    case "book":
+      return renderBook(body, item, ctx);
+    case "media-review":
+      return renderMediaReview(body, item, ctx);
+    case "event-rsvp":
+      return renderEventRsvp(body);
+    case "verification":
+      return renderVerification(body);
+    case "membership":
+      return renderMembership(body);
+    case "location":
+      return renderLocation(body);
+    case "travel":
+      return renderTravel(body);
+    case "standard-site":
+      return renderStandardSite(body);
     default:
-      // Unknown / future body variant (the SDK will add nine app-specific
-      // kinds): degrade to the generic text fallback rather than hard-fail.
+      // Unknown / future body variant: degrade to a generic text fallback
+      // rather than hard-fail.
       return fallbackText(body);
   }
 }
@@ -193,6 +332,360 @@ function fallbackText(body: StreamCardBody): string {
 
 function paragraph(text: string): string {
   return `<p class="stream-text">${nl2br(text)}</p>`;
+}
+
+// --- rich body variants ----------------------------------------------------
+
+/** Wrap a rich variant's content, with an optional leading cover figure. */
+function richWrap(kind: StreamCardBody["kind"], cover: string, inner: string): string {
+  if (!cover && !inner) return "";
+  return `<div class="stream-rich stream-rich-${kind}">${cover}<div class="stream-rich-main">${inner}</div></div>`;
+}
+
+/** Cover image from the first resolved/blob media item, as a small poster. */
+function coverFromMedia(
+  item: StreamCardVM,
+  resolveBlob: (did: string, cid: string) => string | null | undefined
+): string {
+  const m = item.media?.[0];
+  if (!m) return "";
+  const raw = "url" in m ? m.url : resolveBlob(m.did, m.cid);
+  const src = safeUrl(raw ?? null);
+  if (!src) return "";
+  return `<figure class="stream-cover"><img src="${src}" alt="${escapeHtml(
+    m.alt
+  )}" loading="lazy" decoding="async"></figure>`;
+}
+
+/** A muted rich-body paragraph (reviews, descriptions, shouts). */
+function richText(text: string): string {
+  return `<p class="stream-rich-text">${nl2br(text)}</p>`;
+}
+
+/** A bold rich-body title line. */
+function richTitle(text: string): string {
+  return `<p class="stream-rich-title">${escapeHtml(text)}</p>`;
+}
+
+/** A muted rich-body meta line. */
+function richMeta(text: string): string {
+  return `<p class="stream-rich-meta">${escapeHtml(text)}</p>`;
+}
+
+/** A small inline pill/badge. */
+function badge(text: string, extra = ""): string {
+  const cls = extra ? `stream-badge ${extra}` : "stream-badge";
+  return `<span class="${cls}">${escapeHtml(text)}</span>`;
+}
+
+/**
+ * Render a 1-10 rating as five stars (half-step rounded) plus the numeric
+ * value, matching BookHive/Popfeed's own display.
+ */
+function stars(rating: number): string {
+  const filled = Math.max(0, Math.min(5, Math.round(rating / 2)));
+  const glyphs = "★".repeat(filled) + "☆".repeat(5 - filled);
+  return `<span class="stream-stars" aria-label="${escapeHtml(rating)} out of 10"><span class="stream-stars-glyph" aria-hidden="true">${glyphs}</span><span class="stream-rating">${escapeHtml(
+    rating
+  )}/10</span></span>`;
+}
+
+/** GitHub language color dots (subset), mirroring the sifa-web card. */
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6",
+  JavaScript: "#f1e05a",
+  Python: "#3572A5",
+  Rust: "#dea584",
+  Go: "#00ADD8",
+  Java: "#b07219",
+  Ruby: "#701516",
+  "C++": "#f34b7d",
+  C: "#555555",
+  Swift: "#F05138",
+  Kotlin: "#A97BFF",
+  PHP: "#4F5D95",
+  "C#": "#178600",
+  Nix: "#7e7eff",
+  Shell: "#89e051",
+  Vue: "#41b883",
+  Svelte: "#ff3e00",
+  Dart: "#00B4AB",
+  Elixir: "#6e4a7e",
+  Haskell: "#5e5086",
+};
+
+function renderGithubPr(body: BodyOf<"github-pr">): string {
+  const repo = `${body.repoOwner}/${body.repoName}`;
+  const header = `<p class="stream-rich-meta"><span class="stream-repo">${escapeHtml(
+    repo
+  )}</span> <span class="stream-pr-num">#${escapeHtml(body.prNumber)}</span></p>`;
+  const title = richTitle(body.title);
+  const stats: string[] = [];
+  if (body.language) {
+    // Color comes from a fixed constant map (never user data); the language
+    // name itself is escaped.
+    const color = LANGUAGE_COLORS[body.language] ?? "#858585";
+    stats.push(
+      `<span class="stream-lang"><span class="stream-lang-dot" style="--lang-dot:${color}"></span>${escapeHtml(
+        body.language
+      )}</span>`
+    );
+  }
+  if (body.additions > 0 || body.deletions > 0) {
+    stats.push(
+      `<span class="stream-diff-add">+${escapeHtml(body.additions)}</span><span class="stream-diff-del">-${escapeHtml(
+        body.deletions
+      )}</span>`
+    );
+  }
+  const statsRow = stats.length ? `<p class="stream-rich-stats">${stats.join("")}</p>` : "";
+  return richWrap("github-pr", "", header + title + statsRow);
+}
+
+/** BookHive reading-status labels (raw lexicon NSIDs). */
+const BOOK_STATUS_LABELS: Record<string, string> = {
+  "buzz.bookhive.defs#finished": "Finished",
+  "buzz.bookhive.defs#reading": "Reading",
+  "buzz.bookhive.defs#wantToRead": "Want to read",
+  "buzz.bookhive.defs#abandoned": "Abandoned",
+};
+
+function renderBook(
+  body: BodyOf<"book">,
+  item: StreamCardVM,
+  ctx: StreamRenderCtx
+): string {
+  const cover = coverFromMedia(item, ctx.resolveBlob);
+  const parts: string[] = [richTitle(body.title)];
+  const authors = body.authors.filter((a) => a && a.trim());
+  if (authors.length) parts.push(richMeta(authors.join(", ")));
+  if (typeof body.stars === "number" && body.stars > 0) parts.push(stars(body.stars));
+  const statusLabel = body.status ? BOOK_STATUS_LABELS[body.status] : undefined;
+  if (statusLabel) parts.push(badge(statusLabel));
+  if (body.review && body.review.trim()) parts.push(richText(body.review));
+  return richWrap("book", cover, parts.join(""));
+}
+
+function renderMediaReview(
+  body: BodyOf<"media-review">,
+  item: StreamCardVM,
+  ctx: StreamRenderCtx
+): string {
+  const cover = coverFromMedia(item, ctx.resolveBlob);
+  const parts: string[] = [];
+  if (body.isRevisit) parts.push(badge("Revisit"));
+  if (body.title) parts.push(richTitle(body.title));
+  if (body.mainCredit) parts.push(richMeta(body.mainCredit));
+  if (typeof body.rating === "number") parts.push(stars(body.rating));
+  const mediaLabel = body.mediaType
+    ? (MEDIA_TYPE_LABELS[body.mediaType] ?? body.mediaType)
+    : null;
+  if (mediaLabel) parts.push(badge(mediaLabel, "stream-badge-quiet"));
+  if (body.reviewText && body.reviewText.trim()) parts.push(richText(body.reviewText));
+  return richWrap("media-review", cover, parts.join(""));
+}
+
+/** Event RSVP mode labels (normalized enum values). */
+const RSVP_MODE_LABELS: Record<string, string> = {
+  inperson: "In-person",
+  virtual: "Virtual",
+  hybrid: "Hybrid",
+};
+
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** Short month/day range, UTC (deterministic for server rendering). */
+function eventDateRange(startsAt?: string, endsAt?: string): string | null {
+  if (!startsAt) return null;
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime())) return null;
+  const sM = MONTH_ABBR[start.getUTCMonth()];
+  const sD = start.getUTCDate();
+  if (!endsAt) return `${sM} ${sD}`;
+  const end = new Date(endsAt);
+  if (Number.isNaN(end.getTime())) return `${sM} ${sD}`;
+  const eM = MONTH_ABBR[end.getUTCMonth()];
+  const eD = end.getUTCDate();
+  if (sM === eM) return sD === eD ? `${sM} ${sD}` : `${sM} ${sD}-${eD}`;
+  return `${sM} ${sD} - ${eM} ${eD}`;
+}
+
+function renderEventRsvp(body: BodyOf<"event-rsvp">): string {
+  const parts: string[] = [];
+  const nameRow: string[] = [`<span class="stream-rich-title-text">${escapeHtml(
+    body.eventName ?? "Event"
+  )}</span>`];
+  if (body.mode) {
+    const modeLabel = RSVP_MODE_LABELS[body.mode];
+    if (modeLabel) nameRow.push(badge(modeLabel, "stream-badge-quiet"));
+  }
+  parts.push(`<p class="stream-rich-title">${nameRow.join(" ")}</p>`);
+  const range = eventDateRange(body.startsAt, body.endsAt);
+  if (range) parts.push(richMeta(range));
+  const loc = [body.locationName, body.locationLocality, body.locationCountry]
+    .filter((s): s is string => Boolean(s))
+    .join(", ");
+  if (loc) parts.push(richMeta(loc));
+  return richWrap("event-rsvp", "", parts.join(""));
+}
+
+function renderVerification(body: BodyOf<"verification">): string {
+  const subjectText = body.handle
+    ? `${body.subjectLabel ? `${escapeHtml(body.subjectLabel)} ` : ""}@${escapeHtml(
+        body.handle
+      )}`
+    : escapeHtml(body.subjectLabel ?? platformLabel(body.platform));
+  const href = safeUrl(body.profileUrl ?? null);
+  const subject = href
+    ? `<a class="stream-rich-title stream-rich-link" href="${href}" target="_blank" rel="noopener">${subjectText}</a>`
+    : `<p class="stream-rich-title">${subjectText}</p>`;
+  const check = body.verified ? badge("Verified", "stream-badge-verified") : "";
+  return richWrap("verification", "", subject + check);
+}
+
+function renderMembership(body: BodyOf<"membership">): string {
+  // The community name is already in the meta-row verb ("Joined X"); the body
+  // carries the description. (The web card also shows a community picture, but
+  // the view-model does not carry it — see the report.)
+  const desc = body.description && body.description.trim() ? richText(body.description) : "";
+  return richWrap("membership", "", desc);
+}
+
+/** Address display: locality, region, country (matches beaconbits card). */
+function formatAddress(address: BodyOf<"location">["address"]): string | null {
+  if (!address) return null;
+  const parts = [address.locality, address.region, address.country].filter(
+    (p): p is string => Boolean(p && p.trim())
+  );
+  return parts.length ? parts.join(", ") : null;
+}
+
+/** Geo coordinate display, 4 decimal places. */
+function formatGeo(geo: BodyOf<"location">["geo"]): string | null {
+  if (!geo) return null;
+  const { latitude, longitude } = geo;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+}
+
+function renderLocation(body: BodyOf<"location">): string {
+  const parts: string[] = [];
+  if (body.venueName) parts.push(richTitle(body.venueName));
+  if (body.shout) parts.push(richText(body.shout));
+  const locText = formatAddress(body.address) ?? formatGeo(body.geo);
+  if (locText) parts.push(richMeta(locText));
+  return richWrap("location", "", parts.join(""));
+}
+
+/** Travel transportation labels (normalized to lowercase enum values). */
+const TRANSPORTATION_LABELS: Record<string, string> = {
+  flight: "Flight",
+  train: "Train",
+  bus: "Bus",
+  ferry: "Ferry",
+  car: "Car",
+  bike: "Bike",
+  walk: "Walk",
+};
+
+function transportationLabel(raw: string | undefined): string {
+  if (!raw) return "Trip";
+  const key = raw.toLowerCase();
+  return TRANSPORTATION_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function travelDateRange(start?: string, end?: string): string | null {
+  if (!start && !end) return null;
+  if (start && !end) return start;
+  if (!start && end) return end;
+  if (start === end) return start as string;
+  return `${start} – ${end}`;
+}
+
+function renderTravel(body: BodyOf<"travel">): string {
+  const label = transportationLabel(body.transportation);
+  const route =
+    body.origin && body.destination
+      ? `${escapeHtml(body.origin)} → ${escapeHtml(body.destination)}`
+      : escapeHtml(body.origin || body.destination || label);
+  const parts: string[] = [`<p class="stream-rich-title">${route}</p>`];
+  const carrier = body.carrier || body.carrierCode;
+  const meta = carrier ? `${label} · ${carrier}` : label;
+  parts.push(richMeta(meta));
+  const range = travelDateRange(body.startDate, body.endDate);
+  if (range) parts.push(richMeta(range));
+  return richWrap("travel", "", parts.join(""));
+}
+
+/** Long-form date (e.g. "July 10, 2026"), UTC. Reuses the day-header format. */
+function longDate(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return ABSOLUTE_DATE_FMT.format(d);
+}
+
+/** Join a base URL and path into a canonical document URL. */
+function joinPath(base: string, path: string | undefined): string {
+  const noTrail = base.endsWith("/") ? base.slice(0, -1) : base;
+  if (!path) return noTrail;
+  const lead = path.startsWith("/") ? path : `/${path}`;
+  return `${noTrail}${lead}`;
+}
+
+function renderStandardSite(body: BodyOf<"standard-site">): string {
+  const coverSrc = safeUrl(body.coverImageUrl ?? null);
+  const cover = coverSrc
+    ? `<figure class="stream-cover stream-cover-wide"><img src="${coverSrc}" alt="" loading="lazy" decoding="async"></figure>`
+    : "";
+  const parts: string[] = [];
+  if (body.title) parts.push(richTitle(body.title));
+  if (body.description) parts.push(richText(body.description));
+
+  const metaBits: string[] = [];
+  const published = longDate(body.publishedAt);
+  if (published) metaBits.push(escapeHtml(published));
+  if (typeof body.readingTime === "number" && body.readingTime >= 1) {
+    metaBits.push(`${escapeHtml(body.readingTime)} min read`);
+  }
+  if (metaBits.length) {
+    parts.push(`<p class="stream-rich-meta">${metaBits.join(" · ")}</p>`);
+  }
+
+  if (body.publisherName) {
+    const iconSrc = safeUrl(body.icon ?? null);
+    const icon = iconSrc
+      ? `<img class="stream-pub-icon" src="${iconSrc}" alt="" loading="lazy" decoding="async">`
+      : "";
+    const canonical =
+      body.siteUrl && safeUrl(body.siteUrl)
+        ? safeUrl(joinPath(body.siteUrl, body.path))
+        : null;
+    const label = `${icon}<span class="stream-pub-name">${escapeHtml(
+      body.publisherName
+    )}</span>`;
+    parts.push(
+      canonical
+        ? `<a class="stream-publisher stream-rich-link" href="${canonical}" target="_blank" rel="noopener">${label}</a>`
+        : `<p class="stream-publisher">${label}</p>`
+    );
+  }
+  return `<div class="stream-rich stream-rich-standard-site stream-rich-card">${cover}<div class="stream-rich-main">${parts.join(
+    ""
+  )}</div></div>`;
 }
 
 // --- media -----------------------------------------------------------------
