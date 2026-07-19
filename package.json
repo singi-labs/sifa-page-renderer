@@ -58,7 +58,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@singi-labs/sifa-sdk": "0.12.13",
+    "@singi-labs/sifa-sdk": "0.12.15",
     "isomorphic-dompurify": "3.18.0",
     "marked": "16.4.0"
   },

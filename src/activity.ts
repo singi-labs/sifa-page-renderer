@@ -145,8 +145,13 @@ function renderCard(
     item.timestamp
   )}">${escapeHtml(formatRelativeTime(item.timestamp))}</time>`;
   // The verb/action is metadata, not content: it lives in the meta row next to
-  // the source pill + time, styled apart from the post body.
-  const head = `<div class="stream-head">${icon}${source}${renderVerb(item, ctx)}${time}</div>`;
+  // the source pill + time, styled apart from the post body. A trailing
+  // "View on {source}" link (when the VM carries a `sourceUrl`) opens the record
+  // on its origin app in a new tab.
+  const head = `<div class="stream-head">${icon}${source}${renderVerb(
+    item,
+    ctx
+  )}${time}${renderSourceLink(item)}</div>`;
   const isRich = item.body ? RICH_KINDS.has(item.body.kind) : false;
   const body = renderBody(item, ctx);
   // Rich variants render their own cover/link inside the body; suppress the
@@ -155,7 +160,7 @@ function renderCard(
   const link = isRich ? "" : renderExternalLink(item.externalLink);
   // Depth-limit the nested repost/reply target so a cyclic `subject` cannot
   // recurse forever; one level of nesting is enough for the personal-site view.
-  const subject = depth < 1 ? renderSubject(item.subject, ctx, depth) : "";
+  const subject = depth < 1 ? renderSubject(item.subject, ctx, depth, item.verb) : "";
 
   return `<article class="stream-card" data-uri="${escapeHtml(
     item.uri
@@ -173,6 +178,20 @@ function renderVerb(item: StreamCardVM, ctx: StreamRenderCtx): string {
   return href
     ? `<a class="stream-verb stream-verb-link" href="${href}">${text}</a>`
     : `<span class="stream-verb">${text}</span>`;
+}
+
+/**
+ * A trailing "View on {source.label}" link to the record on its origin app.
+ * Rendered only when the VM carries a scheme-valid `sourceUrl`. Kept in the meta
+ * row (never wrapping the whole card) so it can't nest inside the card's other
+ * links; opens in a new tab. `sourceUrl` is scheme-validated + escaped via
+ * `safeUrl`; the label text is HTML-escaped.
+ */
+function renderSourceLink(item: StreamCardVM): string {
+  const href = safeUrl(item.sourceUrl ?? null);
+  if (!href) return "";
+  const label = escapeHtml(`View on ${item.source.label}`);
+  return `<a class="stream-source-link" href="${href}" target="_blank" rel="noopener">${label}<span class="stream-source-link-glyph" aria-hidden="true">↗</span></a>`;
 }
 
 /**
@@ -736,16 +755,23 @@ function renderExternalLink(link: StreamExternalLink | undefined): string {
 function renderSubject(
   subject: StreamCardSubject | undefined,
   ctx: StreamRenderCtx,
-  depth: number
+  depth: number,
+  verb: StreamCardVM["verb"]
 ): string {
   if (!subject) return "";
   switch (subject.kind) {
-    case "post":
-      return `<div class="stream-subject">${renderCard(
+    case "post": {
+      const embed = `<div class="stream-subject">${renderCard(
         subject.post,
         ctx,
         depth + 1
       )}</div>`;
+      // A repost embeds the reposted post as-is (today's rendering). Any other
+      // verb with a post subject is a reply, so frame the embedded post as the
+      // original being replied to.
+      if (verb === "reposted") return embed;
+      return `<p class="stream-reply-label">Replying to</p>${embed}`;
+    }
     case "person": {
       const label = subject.displayName
         ? `${escapeHtml(subject.displayName)} <span class="stream-subject-handle">@${escapeHtml(

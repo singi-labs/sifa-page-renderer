@@ -227,6 +227,10 @@ a { color:var(--link); }
 .stream-verb { color:var(--muted); font-size:0.82rem; }
 .stream-verb-link { color:var(--muted); text-decoration:none; }
 .stream-verb-link:hover { color:var(--link); text-decoration:underline; }
+/* "View on {source}" affordance: trailing meta-row link to the origin app. */
+.stream-source-link { display:inline-flex; align-items:center; gap:0.2rem; color:var(--muted); font-size:0.8rem; text-decoration:none; white-space:nowrap; }
+.stream-source-link:hover { color:var(--link); text-decoration:underline; }
+.stream-source-link-glyph { font-size:0.9em; }
 .stream-text { margin:0.4rem 0 0; word-break:break-word; }
 .stream-track { margin:0.4rem 0 0; font-weight:700; }
 .stream-media { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.6rem 0 0; }
@@ -248,6 +252,9 @@ a { color:var(--link); }
 }
 .stream-subject .stream-card { border:none; border-radius:0; background:none; padding:0; }
 .stream-subject-handle { color:var(--muted); }
+/* "Replying to" caption above the embedded original post (reply cards only). */
+.stream-reply-label { margin:0.6rem 0 0; color:var(--muted); font-size:0.82rem; font-weight:700; }
+.stream-reply-label + .stream-subject { margin-top:0.2rem; }
 
 /* rich typed cards (media-review, book, github-pr, event-rsvp, verification,
    membership, location, travel, standard-site). Structured data laid out with
