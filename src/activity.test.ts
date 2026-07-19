@@ -47,6 +47,35 @@ describe("renderActivityStream: common chrome", () => {
   });
 });
 
+describe("renderActivityStream: app icons", () => {
+  it("gives a shared bsky post a category glyph card icon, not a brand logo", () => {
+    const html = renderActivityStream([vm()], { now: NOW });
+    expect(html).toContain('class="stream-card-icon"');
+    // No bluesky brand logo is embedded, so it must not carry the popfeed mark.
+    expect(html).not.toContain("M 50,0 A 44,44");
+  });
+
+  it("gives a popfeed item its brand logo as the card icon", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          source: { appId: "popfeed", label: "Popfeed", color: "purple" },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain('class="stream-card-icon"');
+    expect(html).toContain("M 50,0 A 44,44");
+  });
+
+  it("renders a glyph before the app name inside the source pill", () => {
+    const html = renderActivityStream([vm()], { now: NOW });
+    // The glyph span precedes the escaped app-name text within the pill.
+    expect(html).toContain('class="stream-source-glyph"');
+    expect(html).toMatch(/stream-source-glyph[\s\S]*?<\/span>Bluesky<\/span>/);
+  });
+});
+
 describe("renderActivityStream: body kinds", () => {
   it("text body: renders the post text with newlines as <br>", () => {
     const html = renderActivityStream(
@@ -349,9 +378,11 @@ describe("renderActivityStream: verb in the meta line", () => {
       [vm({ title: "posted on Bluesky", body: { kind: "text", text: "hello world" } })],
       { now: NOW }
     );
-    // The verb sits in the head next to the source pill + time...
+    // The verb sits in the head, immediately after the source pill (which now
+    // ends with the app name) and before the time.
+    expect(html).toContain('class="stream-head"');
     expect(html).toContain(
-      '<div class="stream-head"><span class="stream-source" data-color="blue">Bluesky</span><span class="stream-verb">posted on Bluesky</span>'
+      'Bluesky</span><span class="stream-verb">posted on Bluesky</span>'
     );
     // ...and there is no longer a separate title line.
     expect(html).not.toContain('class="stream-title"');

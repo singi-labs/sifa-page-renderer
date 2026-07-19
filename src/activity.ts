@@ -24,6 +24,7 @@ import type {
 } from "@singi-labs/sifa-sdk";
 import { formatRelativeTime, isValidRgbColor, rgbToString } from "@singi-labs/sifa-sdk";
 import { escapeHtml, safeUrl } from "./util.js";
+import { cardIcon, pillGlyph } from "./app-icons.js";
 
 /** Default CDN base for the blob-URL builder. Matches the profile renderer's
  *  `<link rel="preconnect" href="https://cdn.bsky.app">`. */
@@ -130,15 +131,22 @@ function renderCard(
   depth: number
 ): string {
   const styleAttr = themeStyle(item.theme);
+  // App icon: brand logo for recognized single-writer apps, else a category
+  // glyph. Static SVG constants (no user data), so no escaping is needed.
+  const icon = `<span class="stream-card-icon" aria-hidden="true">${cardIcon(
+    item.source.appId
+  )}</span>`;
   const source = `<span class="stream-source" data-color="${escapeHtml(
     item.source.color
-  )}">${escapeHtml(item.source.label)}</span>`;
+  )}"><span class="stream-source-glyph" aria-hidden="true">${pillGlyph(
+    item.source.appId
+  )}</span>${escapeHtml(item.source.label)}</span>`;
   const time = `<time class="stream-time" datetime="${escapeHtml(
     item.timestamp
   )}">${escapeHtml(formatRelativeTime(item.timestamp))}</time>`;
   // The verb/action is metadata, not content: it lives in the meta row next to
   // the source pill + time, styled apart from the post body.
-  const head = `<div class="stream-head">${source}${renderVerb(item, ctx)}${time}</div>`;
+  const head = `<div class="stream-head">${icon}${source}${renderVerb(item, ctx)}${time}</div>`;
   const isRich = item.body ? RICH_KINDS.has(item.body.kind) : false;
   const body = renderBody(item, ctx);
   // Rich variants render their own cover/link inside the body; suppress the

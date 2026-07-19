@@ -172,11 +172,17 @@ a { color:var(--link); }
   border-radius:8px; padding:0.85rem 1rem;
 }
 .stream-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; }
+/* App icon (brand logo or category glyph) at the card's top-left. */
+.stream-card-icon { flex:0 0 auto; display:inline-flex; color:var(--muted); }
+.stream-card-icon svg { width:24px; height:24px; display:block; }
 .stream-source {
-  display:inline-flex; align-items:center; font-size:0.74rem; font-weight:700;
+  display:inline-flex; align-items:center; gap:0.3rem; font-size:0.74rem; font-weight:700;
   color:var(--muted); background:var(--bg); border:1px solid var(--border);
   border-radius:999px; padding:0.05rem 0.5rem;
 }
+/* Category glyph inside the source pill, before the app name. */
+.stream-source-glyph { display:inline-flex; }
+.stream-source-glyph svg { width:14px; height:14px; display:block; }
 .stream-time { color:var(--muted); font-size:0.8rem; margin-left:auto; }
 /* The verb is metadata, not content: muted + small, set apart from post text. */
 .stream-verb { color:var(--muted); font-size:0.82rem; }
