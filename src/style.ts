@@ -63,6 +63,39 @@ a { color:var(--link); }
 .masthead-actions { margin-left:auto; display:flex; align-items:center; gap:0.6rem; }
 .sifa-logo { display:inline-flex; align-items:center; line-height:0; }
 
+/* Grouped nav dropdowns (desktop). A group heading is a non-link, focusable
+   trigger; its submenu opens on pointer hover AND :focus-within (keyboard Tab)
+   via CSS alone -- no JS, so the nav still works with scripting disabled. */
+.nav-group { position:relative; display:inline-flex; }
+.nav-group-label {
+  font:inherit; color:var(--muted); background:none; border:0; padding:0.2rem 0;
+  cursor:default; display:inline-flex; align-items:center; gap:0.3rem;
+}
+.nav-group-label::after {
+  content:""; width:0.4em; height:0.4em; border:solid currentColor;
+  border-width:0 1.5px 1.5px 0; transform:translateY(-0.15em) rotate(45deg);
+}
+.nav-group:hover .nav-group-label,
+.nav-group:focus-within .nav-group-label,
+.nav-group.active .nav-group-label { color:var(--fg); }
+.nav-group.active .nav-group-label { font-weight:700; }
+.nav-group-menu {
+  position:absolute; top:100%; left:0; z-index:20;
+  display:flex; flex-direction:column; gap:0.1rem; min-width:12ch;
+  padding:0.4rem; background:var(--bg);
+  border:1px solid var(--border); border-radius:8px;
+  box-shadow:0 6px 24px rgba(0,0,0,0.12);
+  opacity:0; visibility:hidden; transform:translateY(-4px);
+  transition:opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
+}
+.nav-group:hover .nav-group-menu,
+.nav-group:focus-within .nav-group-menu {
+  opacity:1; visibility:visible; transform:translateY(0);
+  transition:opacity 0.12s ease, transform 0.12s ease;
+}
+.nav-group-menu a { white-space:nowrap; padding:0.3rem 0.5rem; border-radius:5px; }
+.nav-group-menu a:hover { background:var(--border); }
+
 /* Mobile bottom nav + "More" sheet: desktop-hidden, shown in the media query. */
 .bottom-nav, .more-sheet { display:none; }
 

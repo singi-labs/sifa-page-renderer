@@ -22,7 +22,24 @@ import { escapeHtml, safeUrl } from "./util.js";
 import { navIcon } from "./section-icons.js";
 import type { RenderedSection } from "./sections.js";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
-import type { StreamCardVM } from "@singi-labs/sifa-sdk";
+import type { StreamCardVM, SectionGroupId } from "@singi-labs/sifa-sdk";
+import { ALL_SECTIONS, SECTION_GROUPS } from "@singi-labs/sifa-sdk";
+
+// Section id -> nav group, straight from the SDK's single source of truth so
+// the personal-site nav groups exactly like the main sifa.id profile.
+const SECTION_ID_TO_GROUP = new Map<string, SectionGroupId>(
+  ALL_SECTIONS.map((s) => [s.id, s.group])
+);
+
+// English group headings (the renderer is i18n-free, matching SECTION_LABELS).
+// `overview` never surfaces as a heading -- its sole section (About) renders
+// flat -- but is included for exhaustiveness.
+const GROUP_LABELS: Record<SectionGroupId, string> = {
+  overview: "Overview",
+  experience: "Experience",
+  qualifications: "Qualifications",
+  more: "More",
+};
 
 // --- Public types -----------------------------------------------------------
 
@@ -57,6 +74,8 @@ export interface AcademicProfile {
     platform?: string | null;
     url?: string | null;
     verified?: boolean | null;
+    /** The link the owner marked primary in their profile's links section. */
+    primary?: boolean | null;
   }> | null;
   /** Nested location object (some profiles use this shape). */
   location?: {
@@ -270,10 +289,22 @@ const PLATFORM_ICON_PATHS: Record<string, string> = {
 const BLUESKY_ICON_PATH =
   "m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z";
 
+// Sifa "@" identity mark (viewBox 0 0 256 256, from the bundled favicon). The
+// two paths form the @ glyph; rendered monochrome in currentColor with
+// fill-rule evenodd so the ring hole stays open. Handled separately in
+// linkIcon() for its distinct viewBox, like the Bluesky butterfly.
+const SIFA_ICON_PATHS = [
+  "M128,71.5C159.183,71.5 184.5,96.817 184.5,128C184.5,159.183 159.183,184.5 128,184.5C96.817,184.5 71.5,159.183 71.5,128C71.5,96.817 96.817,71.5 128,71.5ZM128,104.5C115.03,104.5 104.5,115.03 104.5,128C104.5,140.97 115.03,151.5 128,151.5C140.97,151.5 151.5,140.97 151.5,128C151.5,115.03 140.97,104.5 128,104.5Z",
+  "M174.866,194.259C182.45,189.218 192.7,191.282 197.741,198.866C202.782,206.45 200.718,216.7 193.134,221.741C175.432,233.507 150.846,240.5 128,240.5C66.284,240.5 15.5,189.716 15.5,128C15.5,66.284 66.284,15.5 128,15.5C189.716,15.5 240.5,66.284 240.5,128C240.5,160.538 225.46,184.5 196,184.5C166.54,184.5 151.5,160.538 151.5,128L151.5,88C151.5,78.893 158.893,71.5 168,71.5C177.107,71.5 184.5,78.893 184.5,88L184.5,128C184.5,134.408 185.237,140.363 187.279,145.164C188.851,148.858 191.536,151.5 196,151.5C200.464,151.5 203.149,148.858 204.721,145.164C206.763,140.363 207.5,134.408 207.5,128C207.5,84.388 171.612,48.5 128,48.5C84.388,48.5 48.5,84.388 48.5,128C48.5,171.612 84.388,207.5 128,207.5C144.415,207.5 162.148,202.713 174.866,194.259Z",
+];
+
 function linkIcon(platform?: string | null): string {
   const key = (platform ?? "").toLowerCase();
   if (key === "bsky" || key === "bluesky") {
     return `<svg class="side-link-icon" viewBox="0 0 600 530" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="${BLUESKY_ICON_PATH}"/></svg>`;
+  }
+  if (key === "sifa") {
+    return `<svg class="side-link-icon" viewBox="0 0 256 256" width="16" height="16" aria-hidden="true" fill="currentColor" fill-rule="evenodd"><path d="${SIFA_ICON_PATHS[0]}"/><path d="${SIFA_ICON_PATHS[1]}"/></svg>`;
   }
   const d = PLATFORM_ICON_PATHS[key];
   if (d) {
@@ -320,6 +351,12 @@ interface NavEntry {
   iconId: string;
   /** Pre-resolved href (hash in single-page mode, `.html` otherwise). */
   href: string;
+  /**
+   * SDK nav group this entry belongs to. Drives the desktop masthead grouping
+   * (multi-section groups collapse into a dropdown). Undefined for entries
+   * outside the section model (e.g. the "Now" activity entry), which stay flat.
+   */
+  group?: SectionGroupId;
 }
 
 /**
@@ -391,6 +428,7 @@ function navEntries(
     slug: s.slug,
     title: s.title,
     iconId: s.id,
+    group: SECTION_ID_TO_GROUP.get(s.id),
     href: profileHomeHref
       ? s.slug === "index"
         ? profileHomeHref
@@ -402,15 +440,67 @@ function navEntries(
   return activity ? [...base, activity] : base;
 }
 
+/** A single top-nav anchor, with active state when it's the current page. */
+function navLink(e: NavEntry, activeSlug: string): string {
+  const active = e.slug === activeSlug;
+  return `<a href="${e.href}"${
+    active ? ' aria-current="page" class="active"' : ""
+  }>${escapeHtml(e.title)}</a>`;
+}
+
+/**
+ * A desktop dropdown for a group with 2+ sections: a focusable, non-link
+ * trigger (the group heading) plus a submenu of the section links. Opens on
+ * hover and `:focus-within` via CSS alone -- no JS, so the nav still works with
+ * scripting disabled. The container carries `active` when the current page is
+ * one of its sections, so the collapsed heading can highlight.
+ */
+function navGroup(
+  group: SectionGroupId,
+  run: NavEntry[],
+  activeSlug: string
+): string {
+  const active = run.some((e) => e.slug === activeSlug);
+  const items = run.map((e) => navLink(e, activeSlug)).join("");
+  return (
+    `<div class="nav-group${active ? " active" : ""}">` +
+    `<button type="button" class="nav-group-label" aria-haspopup="true">${escapeHtml(
+      GROUP_LABELS[group]
+    )}</button>` +
+    `<div class="nav-group-menu">${items}</div>` +
+    `</div>`
+  );
+}
+
+/**
+ * The masthead nav: sections grouped by their SDK nav group. A group with a
+ * single visible section renders as a flat top-level link (so Overview shows
+ * just "About"); a group with 2+ sections collapses into a {@link navGroup}
+ * dropdown. Entries without a group (the "Now" activity entry) stay flat. With
+ * one section per group the output is the flat list this produced before.
+ */
 function navItems(entries: NavEntry[], activeSlug: string): string {
-  return entries
-    .map((e) => {
-      const active = e.slug === activeSlug;
-      return `<a href="${e.href}"${
-        active ? ' aria-current="page" class="active"' : ""
-      }>${escapeHtml(e.title)}</a>`;
-    })
-    .join("\n");
+  const out: string[] = [];
+  let i = 0;
+  while (i < entries.length) {
+    const g = entries[i].group;
+    if (g === undefined) {
+      out.push(navLink(entries[i], activeSlug));
+      i++;
+      continue;
+    }
+    // Sections of a group are contiguous (ALL_SECTIONS is group-ordered), so
+    // gather the run sharing this group id.
+    const run: NavEntry[] = [];
+    while (i < entries.length && entries[i].group === g) {
+      run.push(entries[i]);
+      i++;
+    }
+    out.push(
+      run.length === 1 ? navLink(run[0], activeSlug) : navGroup(g, run, activeSlug)
+    );
+  }
+  return out.join("\n");
 }
 
 // Slots on the mobile bottom bar. With more sections than this, the last slot
@@ -518,11 +608,32 @@ function sidebar(profile: AcademicProfile): string {
     ? `<p class="meta-line meta-location">${pinIcon()}${escapeHtml(loc)}</p>`
     : "";
 
+  const accounts = profile.externalAccounts ?? [];
+  // The one link the owner marked primary in their profile's links section.
+  const primaryAccount = accounts.find((a) => a?.primary);
+
   const rawLinks = dedupeByUrl([
-    // Every Sifa user's identity is an AT Protocol/Bluesky account, so the
-    // handle is always their Bluesky handle -- surface it unconditionally as
-    // the identity anchor. Listed first so `dedupeByUrl` keeps this canonical
-    // "@handle" entry over any Bluesky link the user also added by hand.
+    // 1. Primary link (if the owner marked one). Hoisted to the top; its later
+    //    copy in `accounts` below is dropped by `dedupeByUrl`.
+    primaryAccount
+      ? {
+          label: linkLabel(primaryAccount.label, primaryAccount.platform),
+          platform: primaryAccount.platform ?? "",
+          url: primaryAccount.url ?? "",
+        }
+      : null,
+    // 2. Sifa ID -- every Sifa user has a canonical profile, so surface it
+    //    unconditionally as the identity anchor (before any hand-added copy).
+    handle
+      ? {
+          label: "Sifa",
+          platform: "sifa",
+          url: `https://sifa.id/p/${encodeURIComponent(handle)}`,
+        }
+      : null,
+    // 3. Bluesky -- every Sifa identity is an AT Protocol/Bluesky account, so
+    //    the handle is always their Bluesky handle. Listed before any Bluesky
+    //    link the user also added by hand so `dedupeByUrl` keeps this one.
     handle
       ? {
           label: `@${handle}`,
@@ -530,10 +641,11 @@ function sidebar(profile: AcademicProfile): string {
           url: `https://bsky.app/profile/${handle}`,
         }
       : null,
+    // 4. Website, then the remaining external accounts in their existing order.
     profile.website
       ? { label: "Website", platform: "website", url: profile.website }
       : null,
-    ...(profile.externalAccounts ?? []).map((a) => ({
+    ...accounts.map((a) => ({
       label: linkLabel(a.label, a.platform),
       platform: a.platform ?? "",
       url: a.url ?? "",
@@ -808,6 +920,8 @@ function singlePageScript(nonceAttr = ""): string {
     function activate(slug){
       document.querySelectorAll('.page-section').forEach(function(el){el.hidden=el.id!==slug;});
       document.querySelectorAll('.top-nav a').forEach(function(a){mark(a,a.getAttribute('href')==='#'+slug);});
+      // Highlight the collapsed group heading when its section is active.
+      document.querySelectorAll('.top-nav .nav-group').forEach(function(g){g.classList.toggle('active',!!g.querySelector('a[href="#'+slug+'"]'));});
       // Sync the mobile bottom nav + "More" sheet.
       var inSheet=false;
       document.querySelectorAll('.bnav-item[data-slug],.more-item[data-slug]').forEach(function(a){

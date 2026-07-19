@@ -278,8 +278,9 @@ describe("sidebar icons", () => {
       []
     );
     const links = html.match(/<a class="side-link"[^>]*>.*?<\/a>/g) ?? [];
-    // 3 links: the always-on Bluesky @handle identity link, plus website + github.
-    expect(links.length).toBe(3);
+    // 4 links: the always-on Sifa ID + Bluesky @handle identity links, plus
+    // website + github.
+    expect(links.length).toBe(4);
     for (const a of links) {
       expect(a).toContain("side-link-icon");
       expect(a).toContain("side-link-label");
@@ -332,6 +333,14 @@ describe("getCSS / CSS", () => {
   it("overrides the font directory in @font-face rules", () => {
     const css = getCSS({ fontDir: "/fonts/academic" });
     expect(css).toContain("url('/fonts/academic/quattro-regular.woff2')");
+  });
+
+  it("reveals the nav submenu on hover and keyboard focus (no JS)", () => {
+    const css = getCSS();
+    expect(css).toContain(".nav-group-menu");
+    // The submenu opens on pointer hover AND :focus-within (keyboard Tab).
+    expect(css).toMatch(/\.nav-group:hover .nav-group-menu/);
+    expect(css).toMatch(/\.nav-group:focus-within .nav-group-menu/);
   });
 });
 
@@ -424,6 +433,152 @@ describe("sidebar links: dedupe by URL", () => {
     );
     expect(html).toContain("gui.do");
     expect(html).toContain("github.com");
+  });
+});
+
+// --- Part A: grouped desktop nav -------------------------------------------
+
+/** Inner HTML of the masthead `.top-nav`. */
+function topNav(html: string): string {
+  const m = html.match(/<nav class="top-nav">([\s\S]*?)<\/nav>/);
+  if (!m) throw new Error("no top-nav found");
+  return m[1];
+}
+
+// career + skills both live in the "experience" SDK group, so this fixture
+// forces a multi-item group (which collapses into a dropdown) alongside
+// single-item groups (about -> overview, education -> qualifications).
+const GROUPED_SECTIONS: RenderedSection[] = [
+  { id: "about", slug: "index", title: "About", html: "<p>a</p>" },
+  { id: "career", slug: "career", title: "Career", html: "<p>c</p>" },
+  { id: "skills", slug: "skills", title: "Skills", html: "<p>s</p>" },
+  { id: "education", slug: "education", title: "Education", html: "<p>e</p>" },
+];
+
+describe("grouped desktop nav", () => {
+  it("collapses a multi-section group into a labelled submenu", () => {
+    const nav = topNav(renderSinglePage(PROFILE, GROUPED_SECTIONS));
+    // The two experience sections move under an "Experience" group trigger.
+    expect(nav).toContain("nav-group");
+    expect(nav).toContain(">Experience</button>");
+    // Both experience sections are the submenu's items (single-page hash hrefs).
+    expect(nav).toContain('<a href="#career">Career</a>');
+    expect(nav).toContain('<a href="#skills">Skills</a>');
+  });
+
+  it("keeps a single-section group as a flat top-level link", () => {
+    const nav = topNav(renderSinglePage(PROFILE, GROUPED_SECTIONS));
+    // Education is the only "qualifications" section -> flat, no dropdown.
+    expect(nav).toContain('<a href="#education">Education</a>');
+    // About (the sole "overview" section) stays a flat link, with no
+    // "Overview" group heading wrapping it.
+    expect(nav).toContain(">About</a>");
+    expect(nav).not.toContain(">Overview</button>");
+  });
+
+  it("uses a non-link, focusable button as the group trigger (no-JS hover/focus)", () => {
+    const nav = topNav(renderSinglePage(PROFILE, GROUPED_SECTIONS));
+    expect(nav).toContain('<button type="button" class="nav-group-label"');
+    expect(nav).toContain('class="nav-group-menu"');
+  });
+
+  it("marks the group active when one of its sections is the active page", () => {
+    const skills = GROUPED_SECTIONS.find((s) => s.slug === "skills")!;
+    const nav = topNav(renderSectionPage(PROFILE, skills, GROUPED_SECTIONS));
+    // The Experience container carries `active` because Skills is active...
+    expect(nav).toContain('class="nav-group active"');
+    // ...and the active child still gets aria-current inside the menu.
+    expect(nav).toContain(
+      '<a href="skills.html" aria-current="page" class="active">Skills</a>'
+    );
+  });
+
+  it("leaves nav flat (no groups) when every group has one section", () => {
+    // SECTIONS = about/career/education, one section per group.
+    const nav = topNav(renderSinglePage(PROFILE, SECTIONS));
+    expect(nav).not.toContain("nav-group");
+    expect(nav).toContain('<a href="#career">Career</a>');
+  });
+
+  it("keeps the Now activity entry as a flat top-level link", () => {
+    const nav = topNav(
+      renderSinglePage(PROFILE, GROUPED_SECTIONS, { activityStream: true })
+    );
+    expect(nav).toContain('<a href="now.html">Now</a>');
+  });
+});
+
+// --- Part B: sidebar Sifa link + ordering ----------------------------------
+
+/** Ordered list of sidebar link hrefs, top to bottom. */
+function sideLinkHrefs(html: string): string[] {
+  return [...html.matchAll(/<a class="side-link" href="([^"]*)"/g)].map(
+    (m) => m[1]
+  );
+}
+
+describe("sidebar: Sifa ID link + link ordering", () => {
+  it("always surfaces a Sifa ID link to the canonical profile", () => {
+    const html = renderHome(PROFILE, []);
+    expect(html).toContain('href="https://sifa.id/p/jane.bsky.social"');
+    expect(html).toContain(">Sifa</span>");
+  });
+
+  it("omits the sidebar Sifa link when no handle is known", () => {
+    // The footer's "full Sifa ID" link is separate; scope to sidebar links.
+    const hrefs = sideLinkHrefs(renderHome({ ...PROFILE, handle: null }, []));
+    expect(hrefs.some((h) => h.includes("sifa.id/p/"))).toBe(false);
+  });
+
+  it("orders links: primary, Sifa, Bluesky, then the rest", () => {
+    const html = renderHome(
+      {
+        handle: "jane.bsky.social",
+        externalAccounts: [
+          { label: "GitHub", platform: "github", url: "https://github.com/jane" },
+          {
+            label: "My Site",
+            platform: "website",
+            url: "https://jane.example",
+            primary: true,
+          },
+        ],
+      },
+      []
+    );
+    expect(sideLinkHrefs(html)).toEqual([
+      "https://jane.example",
+      "https://sifa.id/p/jane.bsky.social",
+      "https://bsky.app/profile/jane.bsky.social",
+      "https://github.com/jane",
+    ]);
+  });
+
+  it("starts at Sifa when no link is marked primary", () => {
+    const hrefs = sideLinkHrefs(renderHome(PROFILE, []));
+    expect(hrefs[0]).toBe("https://sifa.id/p/jane.bsky.social");
+    expect(hrefs[1]).toBe("https://bsky.app/profile/jane.bsky.social");
+  });
+
+  it("shows a primary account only once (hoisted, not duplicated)", () => {
+    const html = renderHome(
+      {
+        handle: "jane.bsky.social",
+        externalAccounts: [
+          {
+            label: "My Site",
+            platform: "website",
+            url: "https://jane.example",
+            primary: true,
+          },
+        ],
+      },
+      []
+    );
+    const dupes = sideLinkHrefs(html).filter(
+      (h) => h === "https://jane.example"
+    );
+    expect(dupes.length).toBe(1);
   });
 });
 
