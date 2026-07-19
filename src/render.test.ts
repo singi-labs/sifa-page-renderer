@@ -521,7 +521,7 @@ describe("sidebar: Sifa ID link + link ordering", () => {
   it("always surfaces a Sifa ID link to the canonical profile", () => {
     const html = renderHome(PROFILE, []);
     expect(html).toContain('href="https://sifa.id/p/jane.bsky.social"');
-    expect(html).toContain(">Sifa</span>");
+    expect(html).toContain(">Sifa ID</span>");
   });
 
   it("omits the sidebar Sifa link when no handle is known", () => {

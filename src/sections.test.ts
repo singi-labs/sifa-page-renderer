@@ -86,7 +86,7 @@ describe('buildProfileSections: structured detail', () => {
     expect(career.html).toContain('Skills: TypeScript, Postgres');
   });
 
-  it('renders a publication title as a link, falling back to a DOI URL', () => {
+  it('renders a non-standard publication as a card: title links (DOI fallback), publisher, date', () => {
     const profile = makeProfile({
       publications: [
         { rkey: 'p1', title: 'On Trust', publisher: 'ACM', date: '2021-05', doi: '10.1/xyz' },
@@ -96,7 +96,7 @@ describe('buildProfileSections: structured detail', () => {
     expect(pubs.html).toContain('href="https://doi.org/10.1/xyz"');
     expect(pubs.html).toContain('On Trust');
     expect(pubs.html).toContain('ACM');
-    expect(pubs.html).toContain('(May 2021)');
+    expect(pubs.html).toContain('May 2021');
   });
 
   it('links a project by its URL and passes the description through Markdown', () => {
@@ -205,5 +205,155 @@ describe('buildProfileSections: security', () => {
     });
     const career = buildProfileSections(profile).find((s) => s.id === 'career')!;
     expect(career.html).toContain('Dev &quot;quote&quot; role');
+  });
+});
+
+describe('presentations: deliveries collapse into a summary', () => {
+  const profileWithTalk = (deliveries: Array<Record<string, unknown>>) =>
+    makeProfile({
+      presentations: [{ rkey: 't1', title: 'Persuasive E-commerce' }],
+      presentationDeliveries: deliveries.map((d) => ({
+        presentationRkey: 't1',
+        ...d,
+      })) as never,
+    });
+
+  it('renders a <details> summary line instead of listing every delivery', () => {
+    const html = buildProfileSections(
+      profileWithTalk([
+        { rkey: 'd1', eventName: 'EXCITE 2025', date: '2025-05-01' },
+        { rkey: 'd2', eventName: 'EXCITE 2024', date: '2024-05-01' },
+        { rkey: 'd3', eventName: 'Bikkeldag', date: '2023-05-01' },
+      ]),
+    ).find((s) => s.id === 'presentations')!.html;
+    // Collapsed by default behind a native <details>.
+    expect(html).toContain('<details');
+    expect(html).toContain('<summary');
+    // Summary: Delivered Nx · latest YYYY · venues (most-recent first).
+    expect(html).toContain('Delivered 3x');
+    expect(html).toContain('latest 2025');
+    expect(html).toContain('EXCITE 2025, EXCITE 2024, Bikkeldag');
+  });
+
+  it('uses "Delivered once" for a single delivery under a talk', () => {
+    const html = buildProfileSections(
+      profileWithTalk([{ rkey: 'd1', eventName: 'QCon', date: '2022-01-01' }]),
+    ).find((s) => s.id === 'presentations')!.html;
+    expect(html).toContain('Delivered once');
+  });
+
+  it('caps the venue sample and shows a +N overflow', () => {
+    const html = buildProfileSections(
+      profileWithTalk([
+        { rkey: 'd1', eventName: 'A', date: '2025-01-01' },
+        { rkey: 'd2', eventName: 'B', date: '2024-01-01' },
+        { rkey: 'd3', eventName: 'C', date: '2023-01-01' },
+        { rkey: 'd4', eventName: 'D', date: '2022-01-01' },
+        { rkey: 'd5', eventName: 'E', date: '2021-01-01' },
+      ]),
+    ).find((s) => s.id === 'presentations')!.html;
+    expect(html).toContain('A, B, C +2');
+  });
+
+  it('keeps a standalone session (no parent talk) as a flat entry, not a summary', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        presentationDeliveries: [
+          { rkey: 'd1', title: 'Spryker Partner Hackathon', eventName: 'Spryker Partner Hackathon', date: '2023-07-08' },
+        ] as never,
+      }),
+    ).find((s) => s.id === 'presentations')!.html;
+    expect(html).toContain('Spryker Partner Hackathon');
+    expect(html).not.toContain('Delivered');
+    expect(html).not.toContain('<details');
+  });
+});
+
+describe('publications: standard.site articles group into a rich card', () => {
+  const standard = (rkey: string, title: string, date: string) => ({
+    rkey,
+    title,
+    date,
+    source: 'standard' as const,
+    publisher: 'gui.do',
+    publicationName: 'Guido X Jansen',
+    publicationUrl: 'https://gui.do',
+    url: `https://gui.do/${rkey}`,
+    image: `https://cdn.example/${rkey}.jpg`,
+  });
+
+  it('groups standard articles under one card with name, count, and thumbnails', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        publications: [
+          standard('a1', 'Your identity', '2026-07-01'),
+          standard('a2', 'Who owns your network', '2026-06-25'),
+        ],
+      }),
+    ).find((s) => s.id === 'publications')!.html;
+    expect(html).toContain('Guido X Jansen');
+    expect(html).toContain('2 articles');
+    // Cover thumbnails + article title links.
+    expect(html).toContain('https://cdn.example/a1.jpg');
+    expect(html).toContain('href="https://gui.do/a1"');
+    expect(html).toContain('Your identity');
+  });
+
+  it('collapses a group beyond three articles behind a "Show more"', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        publications: [
+          standard('a1', 'One', '2026-05-01'),
+          standard('a2', 'Two', '2026-04-01'),
+          standard('a3', 'Three', '2026-03-01'),
+          standard('a4', 'Four', '2026-02-01'),
+          standard('a5', 'Five', '2026-01-01'),
+        ],
+      }),
+    ).find((s) => s.id === 'publications')!.html;
+    expect(html).toContain('<details');
+    expect(html).toContain('Show 2 more');
+  });
+
+  it('lists non-standard publications separately under "Other publications"', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        publications: [
+          standard('a1', 'Standard One', '2026-05-01'),
+          { rkey: 'o1', title: 'A Journal Paper', publisher: 'ACM', date: '2020-01', source: 'orcid' },
+        ],
+      }),
+    ).find((s) => s.id === 'publications')!.html;
+    expect(html).toContain('Other publications');
+    expect(html).toContain('A Journal Paper');
+  });
+});
+
+describe('courses: linked credential is an actual link when the credential has a URL', () => {
+  it('links the credential name to its credentialUrl', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        courses: [{ rkey: 'c1', name: 'Leadership Program', credentialRkey: 'cert1' }] as never,
+        certifications: [
+          { rkey: 'cert1', name: 'Leadership Cert', issueDate: '2016-01', credentialUrl: 'https://cred.example/x' } as never,
+        ],
+      }),
+    ).find((s) => s.id === 'courses')!.html;
+    expect(html).toContain('Linked credential:');
+    expect(html).toContain('<a href="https://cred.example/x"');
+    expect(html).toContain('Leadership Cert');
+  });
+
+  it('leaves the credential name as plain text when it has no URL', () => {
+    const html = buildProfileSections(
+      makeProfile({
+        courses: [{ rkey: 'c1', name: 'Leadership Program', credentialRkey: 'cert1' }] as never,
+        certifications: [{ rkey: 'cert1', name: 'Leadership Cert', issueDate: '2016-01' } as never],
+      }),
+    ).find((s) => s.id === 'courses')!.html;
+    expect(html).toContain('Linked credential:');
+    expect(html).toContain('Leadership Cert');
+    // No anchor wrapping the credential name.
+    expect(html).not.toContain('<a href');
   });
 });

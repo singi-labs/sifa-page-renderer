@@ -56,6 +56,7 @@ import {
   groupSkillsByCategory,
   CATEGORY_LABELS,
   formatPresentationDuration,
+  summarizePresentationDeliveries,
   getPresentationRoleLabel,
   getCalendarEventModeLabel,
   EMPLOYMENT_TYPE_LABELS,
@@ -173,24 +174,129 @@ function renderProjects(profile: Profile): string {
   );
 }
 
-function renderPublications(profile: Profile): string {
-  const items = sortPublications(visible(profile.publications));
-  return list(
-    items.map((pub: ProfilePublication) => {
-      if (!pub.title) return '';
-      const href = pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : '');
-      const title = safeUrl(href)
-        ? `<a href="${safeUrl(href)}" rel="noopener" target="_blank">${escapeHtml(pub.title)}</a>`
-        : `<strong>${escapeHtml(pub.title)}</strong>`;
-      const publisher = pub.publisher
-        ? ` &mdash; <span class="cv-venue">${escapeHtml(pub.publisher)}</span>`
-        : '';
-      const when = pub.date
-        ? ` <span class="cv-when">(${escapeHtml(formatTimelineDate(pub.date))})</span>`
-        : '';
-      return `<li class="cv-entry cv-cite">${title}${publisher}${when}</li>`;
-    }),
+interface PublicationGroup {
+  name: string;
+  url: string | null;
+  articles: ProfilePublication[];
+}
+
+/**
+ * Group Standard.site articles under their parent publication, matching the
+ * Sifa profile. Key precedence: publicationUri -> publicationUrl -> publisher
+ * -> rkey. Groups ordered by most-recent article; articles newest-first.
+ */
+function groupStandardPublications(pubs: ProfilePublication[]): PublicationGroup[] {
+  const time = (p: ProfilePublication): number => (p.date ? new Date(p.date).getTime() : 0);
+  const groups = new Map<string, PublicationGroup>();
+  for (const pub of pubs) {
+    const key = pub.publicationUri ?? pub.publicationUrl ?? pub.publisher ?? pub.rkey;
+    let group = groups.get(key);
+    if (!group) {
+      group = { name: pub.publicationName ?? pub.publisher ?? 'Publication', url: pub.publicationUrl ?? null, articles: [] };
+      groups.set(key, group);
+    }
+    group.articles.push(pub);
+  }
+  const ordered = [...groups.values()];
+  for (const g of ordered) g.articles.sort((a, b) => time(b) - time(a));
+  ordered.sort((a, b) => time(b.articles[0]!) - time(a.articles[0]!));
+  return ordered;
+}
+
+/** The link target for a publication title: explicit URL, else a DOI resolver. */
+function publicationHref(pub: ProfilePublication): string | undefined {
+  return pub.url ?? (pub.doi ? `https://doi.org/${pub.doi}` : undefined);
+}
+
+/** A Standard.site article row inside a group card: thumbnail, title, publisher, date. */
+function articleRow(pub: ProfilePublication): string {
+  if (!pub.title) return '';
+  const href = safeUrl(publicationHref(pub));
+  const img = safeUrl(pub.image ?? undefined);
+  const thumb = img
+    ? `<img class="pub-thumb" src="${img}" alt="" loading="lazy">`
+    : '<span class="pub-thumb pub-thumb-empty" aria-hidden="true"></span>';
+  const sub = pub.publisher ? `<span class="pub-row-sub">${escapeHtml(pub.publisher)}</span>` : '';
+  const date = pub.date
+    ? `<span class="pub-row-date">${escapeHtml(formatTimelineDate(pub.date))}</span>`
+    : '';
+  const inner = `${thumb}<span class="pub-row-main"><span class="pub-row-title">${escapeHtml(
+    pub.title,
+  )}</span>${sub}</span>${date}`;
+  return href
+    ? `<a class="pub-row" href="${href}" rel="noopener" target="_blank">${inner}</a>`
+    : `<div class="pub-row">${inner}</div>`;
+}
+
+/** A grouped Standard.site publication card: header + up to 3 rows, rest collapsed. */
+function publicationGroupCard(group: PublicationGroup): string {
+  const rows = group.articles.map(articleRow).filter((r) => r);
+  const shown = rows.slice(0, 3).join('');
+  const rest = rows.slice(3);
+  const more = rest.length
+    ? `<details class="pub-more"><summary>Show ${rest.length} more</summary>${rest.join('')}</details>`
+    : '';
+  const n = group.articles.length;
+  const count = `<span class="pub-group-count">${n} article${n === 1 ? '' : 's'}</span>`;
+  const cta = safeUrl(group.url ?? undefined)
+    ? `<a class="pub-group-cta" href="${safeUrl(
+        group.url ?? undefined,
+      )}" rel="noopener" target="_blank">Read article</a>`
+    : '';
+  return (
+    `<div class="pub-group"><div class="pub-group-head"><span class="pub-group-title">` +
+    `<span class="pub-group-name">${escapeHtml(group.name)}</span> ${count}</span>${cta}</div>` +
+    `<div class="pub-rows">${shown}${more}</div></div>`
   );
+}
+
+/** A non-Standard publication (Sifa/ORCID): title link, venue/type, contributors, DOI, date. */
+function otherPublicationRow(pub: ProfilePublication): string {
+  if (!pub.title) return '';
+  const href = safeUrl(publicationHref(pub));
+  const title = href
+    ? `<a href="${href}" rel="noopener" target="_blank">${escapeHtml(pub.title)}</a>`
+    : `<strong>${escapeHtml(pub.title)}</strong>`;
+  const parts = [`<div class="pub-o-title">${title}</div>`];
+  if (pub.subtitle) parts.push(`<div class="pub-o-subtitle">${escapeHtml(pub.subtitle)}</div>`);
+  const metaBits = [pub.publisher, pub.typeLabel].filter(Boolean).map((t) => escapeHtml(t as string));
+  if (metaBits.length) parts.push(`<div class="pub-o-meta">${metaBits.join(' · ')}</div>`);
+  const contributors = (pub.contributors ?? [])
+    .map((c) =>
+      c.handle
+        ? `<a href="https://sifa.id/p/${encodeURIComponent(c.handle)}" rel="noopener" target="_blank">${escapeHtml(
+            c.name,
+          )}</a>`
+        : escapeHtml(c.name),
+    )
+    .filter((s) => s);
+  if (contributors.length)
+    parts.push(`<div class="pub-o-contrib">${contributors.join(', ')}</div>`);
+  if (pub.doi)
+    parts.push(
+      `<a class="pub-o-doi" href="https://doi.org/${encodeURIComponent(
+        pub.doi,
+      )}" rel="noopener" target="_blank">doi.org/${escapeHtml(pub.doi)}</a>`,
+    );
+  const date = pub.date
+    ? `<span class="pub-o-date">${escapeHtml(formatTimelineDate(pub.date))}</span>`
+    : '';
+  return `<div class="pub-o-row"><div class="pub-o-body">${parts.join('')}</div>${date}</div>`;
+}
+
+function renderPublications(profile: Profile): string {
+  const items = sortPublications(visible(profile.publications)).filter((p) => p.title);
+  const standard = items.filter((p) => p.source === 'standard');
+  const other = items.filter((p) => p.source !== 'standard');
+  if (!standard.length && !other.length) return '';
+
+  const groups = groupStandardPublications(standard).map(publicationGroupCard).join('');
+  if (!other.length) return groups;
+
+  // A heading separates the two lists only when both are present.
+  const otherHead = groups ? '<h3 class="pub-other-head">Other publications</h3>' : '';
+  const otherRows = other.map(otherPublicationRow).filter((r) => r).join('');
+  return `${groups}${otherHead}<div class="pub-o-list">${otherRows}</div>`;
 }
 
 function renderCredentials(profile: Profile): string {
@@ -253,7 +359,7 @@ function renderCourses(profile: Profile): string {
         : '';
       const cert = c.credentialRkey ? certByRkey.get(c.credentialRkey) : undefined;
       const linked = cert
-        ? `<div class="cv-meta">Linked credential: ${escapeHtml(cert.name)}</div>`
+        ? `<div class="cv-meta">Linked credential: ${safeAnchor(cert.credentialUrl, cert.name)}</div>`
         : '';
       return `<li class="cv-entry"><strong>${escapeHtml(c.name ?? '')}</strong>${issuer}${when}${linked}</li>`;
     }),
@@ -315,6 +421,27 @@ function renderLanguages(profile: Profile): string {
       return `<li class="cv-entry">${escapeHtml(l.language)}${prof}</li>`;
     }),
   );
+}
+
+/**
+ * One-line roll-up of a talk's deliveries, matching the Sifa profile's collapsed
+ * view: "Delivered 9x · latest 2019 · 2 keynotes · Meet Magento NL, ... +2".
+ * Cancelled occasions are excluded by the SDK summarizer. Already HTML-escaped.
+ */
+function deliverySummaryLine(deliveries: ProfilePresentationDelivery[]): string {
+  const s = summarizePresentationDeliveries(deliveries);
+  const venueText = s.venues.length
+    ? s.venues.join(', ') + (s.moreVenues ? ` +${s.moreVenues}` : '')
+    : undefined;
+  const parts = [
+    s.count > 0 ? (s.count === 1 ? 'Delivered once' : `Delivered ${s.count}x`) : undefined,
+    s.recentYear ? `latest ${s.recentYear}` : undefined,
+    s.keynoteCount
+      ? `${s.keynoteCount} ${s.keynoteCount === 1 ? 'keynote' : 'keynotes'}`
+      : undefined,
+    venueText,
+  ].filter(Boolean) as string[];
+  return escapeHtml(parts.join(' · '));
 }
 
 function renderPresentations(profile: Profile): string {
@@ -386,7 +513,11 @@ function renderTalk(
   if (metaParts.length) parts.push(`<div class="cv-meta">${escapeHtml(metaParts.join(' · '))}</div>`);
   if (talk.description) parts.push(`<div class="cv-desc">${renderMarkdown(talk.description)}</div>`);
   if (deliveries.length)
-    parts.push(`<ul class="cv-list">${deliveries.map(deliveryLine).join('')}</ul>`);
+    parts.push(
+      `<details class="cv-deliveries"><summary class="cv-delivery-summary">${deliverySummaryLine(
+        deliveries,
+      )}</summary><ul class="cv-list">${deliveries.map(deliveryLine).join('')}</ul></details>`,
+    );
   return parts.join('');
 }
 

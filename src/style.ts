@@ -155,6 +155,46 @@ a { color:var(--link); }
 .prose .cv-taglist { list-style:none; padding-left:0; margin:0.35rem 0 0; display:flex; flex-wrap:wrap; gap:0.4rem; }
 .prose .cv-taglist li { margin:0; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:0.1rem 0.55rem; font-size:0.88em; }
 
+/* Talk deliveries: collapsed behind a one-line summary (native <details>, no JS).
+   Caret points right when closed (toward the summary), rotates down when open. */
+.cv-deliveries { margin-top:0.4rem; }
+.cv-delivery-summary { cursor:pointer; list-style:none; color:var(--muted); font-size:0.9em; display:flex; align-items:center; gap:0.4rem; }
+.cv-delivery-summary::-webkit-details-marker { display:none; }
+.cv-delivery-summary::before { content:""; width:0.4em; height:0.4em; border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:rotate(-45deg); transition:transform 0.15s ease; flex:none; }
+.cv-deliveries[open] .cv-delivery-summary::before { transform:rotate(45deg); }
+.cv-delivery-summary:hover { color:var(--fg); }
+.cv-deliveries .cv-list { margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border); }
+
+/* Publications: grouped Standard.site cards + an "Other publications" list. */
+.pub-group { border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem; margin:0 0 1rem; background:var(--card); }
+.pub-group-head { display:flex; align-items:baseline; justify-content:space-between; gap:0.75rem; margin-bottom:0.4rem; }
+.pub-group-name { font-weight:700; }
+.pub-group-count { color:var(--muted); font-size:0.86em; }
+.pub-group-cta { flex:none; font-size:0.86em; color:var(--link); text-decoration:none; white-space:nowrap; }
+.pub-group-cta:hover { text-decoration:underline; }
+.pub-row { display:flex; align-items:center; gap:0.7rem; padding:0.45rem 0; text-decoration:none; color:var(--fg); border-top:1px solid var(--border); }
+.pub-rows > .pub-row:first-child { border-top:0; }
+.pub-thumb { width:44px; height:44px; border-radius:6px; object-fit:cover; border:1px solid var(--border); flex:none; }
+.pub-thumb-empty { background:var(--bg); }
+.pub-row-main { display:flex; flex-direction:column; min-width:0; flex:1; }
+.pub-row-title { font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+.pub-row-sub { color:var(--muted); font-size:0.84em; }
+.pub-row-date { color:var(--muted); font-size:0.84em; white-space:nowrap; flex:none; }
+.pub-row:hover .pub-row-title { text-decoration:underline; }
+.pub-more > summary { cursor:pointer; list-style:none; color:var(--link); font-size:0.86em; padding:0.5rem 0 0.15rem; }
+.pub-more > summary::-webkit-details-marker { display:none; }
+.pub-more > summary:hover { text-decoration:underline; }
+.pub-other-head { font-size:0.92rem; color:var(--muted); margin:1.3rem 0 0.5rem; }
+.pub-o-list { display:flex; flex-direction:column; }
+.pub-o-row { display:flex; justify-content:space-between; gap:0.75rem; padding:0.6rem 0; border-top:1px solid var(--border); }
+.pub-o-list > .pub-o-row:first-child { border-top:0; }
+.pub-o-body { min-width:0; }
+.pub-o-title { font-weight:600; }
+.pub-o-subtitle { color:var(--muted); font-size:0.9em; margin-top:0.1rem; }
+.pub-o-meta, .pub-o-contrib { color:var(--muted); font-size:0.84em; margin-top:0.1rem; }
+.pub-o-doi { display:inline-block; font-size:0.82em; margin-top:0.15rem; }
+.pub-o-date { color:var(--muted); font-size:0.84em; white-space:nowrap; flex:none; }
+
 /* activity stream (renderActivityStream). Additive: no existing selector is
    changed. Per-item theme colors arrive as the inline custom properties
    --stream-card-bg / --stream-card-fg / --stream-accent, each falling back to

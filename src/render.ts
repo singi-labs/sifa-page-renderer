@@ -289,14 +289,16 @@ const PLATFORM_ICON_PATHS: Record<string, string> = {
 const BLUESKY_ICON_PATH =
   "m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z";
 
-// Sifa "@" identity mark (viewBox 0 0 256 256, from the bundled favicon). The
-// two paths form the @ glyph; rendered monochrome in currentColor with
-// fill-rule evenodd so the ring hole stays open. Handled separately in
-// linkIcon() for its distinct viewBox, like the Bluesky butterfly.
-const SIFA_ICON_PATHS = [
+// Full Sifa logo mark (viewBox 0 0 256 256, from the bundled favicon): the two
+// filled `@` paths plus the two outlined diamonds and the chevron. Rendered
+// monochrome in currentColor so it follows the light/dark toggle and sits
+// alongside the other sidebar glyphs. Handled separately in linkIcon() for its
+// distinct viewBox, like the Bluesky butterfly.
+const SIFA_ATSIGN_PATHS = [
   "M128,71.5C159.183,71.5 184.5,96.817 184.5,128C184.5,159.183 159.183,184.5 128,184.5C96.817,184.5 71.5,159.183 71.5,128C71.5,96.817 96.817,71.5 128,71.5ZM128,104.5C115.03,104.5 104.5,115.03 104.5,128C104.5,140.97 115.03,151.5 128,151.5C140.97,151.5 151.5,140.97 151.5,128C151.5,115.03 140.97,104.5 128,104.5Z",
   "M174.866,194.259C182.45,189.218 192.7,191.282 197.741,198.866C202.782,206.45 200.718,216.7 193.134,221.741C175.432,233.507 150.846,240.5 128,240.5C66.284,240.5 15.5,189.716 15.5,128C15.5,66.284 66.284,15.5 128,15.5C189.716,15.5 240.5,66.284 240.5,128C240.5,160.538 225.46,184.5 196,184.5C166.54,184.5 151.5,160.538 151.5,128L151.5,88C151.5,78.893 158.893,71.5 168,71.5C177.107,71.5 184.5,78.893 184.5,88L184.5,128C184.5,134.408 185.237,140.363 187.279,145.164C188.851,148.858 191.536,151.5 196,151.5C200.464,151.5 203.149,148.858 204.721,145.164C206.763,140.363 207.5,134.408 207.5,128C207.5,84.388 171.612,48.5 128,48.5C84.388,48.5 48.5,84.388 48.5,128C48.5,171.612 84.388,207.5 128,207.5C144.415,207.5 162.148,202.713 174.866,194.259Z",
 ];
+const SIFA_ICON = `<svg class="side-link-icon" viewBox="0 0 256 256" width="16" height="16" aria-hidden="true"><g transform="matrix(0.333333,0,0,0.333333,37.583333,37.083333)" fill="currentColor" fill-rule="evenodd"><path d="${SIFA_ATSIGN_PATHS[0]}"/><path d="${SIFA_ATSIGN_PATHS[1]}"/></g><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"><path d="M176,47.75 L208,79.75 L176,111.75 L144,79.75 Z" stroke-width="12"/><path d="M80,144 L112,176 L80,208 L48,176 Z" stroke-width="12"/><path d="M152,192 L176,160 L200,192" stroke-width="11"/></g></svg>`;
 
 function linkIcon(platform?: string | null): string {
   const key = (platform ?? "").toLowerCase();
@@ -304,7 +306,7 @@ function linkIcon(platform?: string | null): string {
     return `<svg class="side-link-icon" viewBox="0 0 600 530" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="${BLUESKY_ICON_PATH}"/></svg>`;
   }
   if (key === "sifa") {
-    return `<svg class="side-link-icon" viewBox="0 0 256 256" width="16" height="16" aria-hidden="true" fill="currentColor" fill-rule="evenodd"><path d="${SIFA_ICON_PATHS[0]}"/><path d="${SIFA_ICON_PATHS[1]}"/></svg>`;
+    return SIFA_ICON;
   }
   const d = PLATFORM_ICON_PATHS[key];
   if (d) {
@@ -626,7 +628,7 @@ function sidebar(profile: AcademicProfile): string {
     //    unconditionally as the identity anchor (before any hand-added copy).
     handle
       ? {
-          label: "Sifa",
+          label: "Sifa ID",
           platform: "sifa",
           url: `https://sifa.id/p/${encodeURIComponent(handle)}`,
         }
