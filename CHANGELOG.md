@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.17
+
+### Patch Changes
+
+- Group the desktop nav into submenus (Experience, Qualifications, More) so it no longer wraps on profiles with many sections, and add an always-present Sifa ID link to the sidebar.
+
 ## 0.2.16
 
 ### Patch Changes
