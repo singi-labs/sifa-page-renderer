@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.15
+
+### Patch Changes
+
+- bbbb0ca: Add optional `RenderContext.profileHomeHref` so single-page hosts can point the section nav back at the profile home. When set, the About/index section links to `profileHomeHref` and every other section links to `profileHomeHref` + `#` + slug (e.g. `/gui.do#career`), in both the masthead and mobile bottom nav. This fixes the activity ("Now") page's section links resolving to `page.sifa.id/{handle}/career.html` and 404ing. The "Now" activity entry keeps its own href and active-state; the value is validated/escaped like `activityStream.href`. Byte-identical output when unset.
+
 ## 0.2.14
 
 ### Patch Changes
