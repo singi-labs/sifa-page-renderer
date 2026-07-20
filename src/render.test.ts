@@ -298,6 +298,23 @@ describe("sidebar icons", () => {
     expect(html).toContain("M12 .297c-6.63 0-12 5.373-12 12"); // github path
   });
 
+  it("uses the ActivityPub mark (not the Fediverse glyph) for a fediverse platform", () => {
+    const html = renderHome(
+      {
+        handle: "j",
+        externalAccounts: [
+          { platform: "fediverse", url: "https://mastodon.social/@j" },
+        ],
+      },
+      []
+    );
+    // The ActivityPub logo symbol carries its own viewBox, like the Bluesky
+    // butterfly, so assert on that distinctive box.
+    expect(html).toContain('viewBox="0 0 34.395832 34.395832"');
+    // and the old simple-icons Fediverse glyph is gone.
+    expect(html).not.toContain("M23.268 5.313");
+  });
+
   it("falls back to a globe for an unknown / custom-website platform", () => {
     const html = renderHome(
       { handle: "j", website: "https://jane.example" },
