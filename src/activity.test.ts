@@ -228,6 +228,54 @@ describe("renderActivityStream: subject (repost/reply target)", () => {
     expect(html).toContain("the original post");
   });
 
+  it("post subject: renders the original author's avatar, name, and handle", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          verb: "reposted",
+          title: "reposted",
+          subject: {
+            kind: "post",
+            post: vm({
+              uri: "at://did:plc:bob/app.bsky.feed.post/9",
+              body: { kind: "text", text: "the original post" },
+              author: {
+                did: "did:plc:bob",
+                handle: "bmann.ca",
+                displayName: "Boris",
+                avatar: "https://cdn.bsky.app/img/avatar/plain/did:plc:bob/x@jpeg",
+              },
+            }),
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain("stream-subject-author");
+    expect(html).toContain("Boris");
+    expect(html).toContain("@bmann.ca");
+    expect(html).toContain(
+      'src="https://cdn.bsky.app/img/avatar/plain/did:plc:bob/x@jpeg"'
+    );
+  });
+
+  it("does not render an author row on the top-level card (owner's own activity)", () => {
+    const html = renderActivityStream(
+      [
+        vm({
+          author: {
+            did: "did:plc:abc",
+            handle: "gui.do",
+            displayName: "Guido",
+            avatar: "https://cdn.bsky.app/img/avatar/plain/did:plc:abc/y@jpeg",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).not.toContain("stream-subject-author");
+  });
+
   it("person subject: renders the handle", () => {
     const html = renderActivityStream(
       [

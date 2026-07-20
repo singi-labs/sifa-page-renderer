@@ -297,6 +297,11 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 }
 .stream-subject .stream-card { border:none; border-radius:0; background:none; padding:0; }
 .stream-subject-handle { color:var(--muted); }
+/* Author row on an embedded subject card: whose post is quoted/reposted/replied to. */
+.stream-subject-author { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.3rem; }
+.stream-subject-avatar { width:20px; height:20px; border-radius:50%; object-fit:cover; flex:none; }
+.stream-subject-identity { display:flex; align-items:baseline; gap:0.3rem; min-width:0; font-size:0.9em; }
+.stream-subject-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* "Replying to" caption above the embedded original post (reply cards only). */
 .stream-reply-label { margin:0.6rem 0 0; color:var(--muted); font-size:0.82rem; font-weight:700; }
 .stream-reply-label + .stream-subject { margin-top:0.2rem; }

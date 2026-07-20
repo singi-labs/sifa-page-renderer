@@ -159,10 +159,14 @@ function renderCard(
   // Depth-limit the nested repost/reply target so a cyclic `subject` cannot
   // recurse forever; one level of nesting is enough for the personal-site view.
   const subject = depth < 1 ? renderSubject(item.subject, ctx, depth, item.verb) : "";
+  // Only nested subject cards (the quoted / reposted / replied-to original)
+  // show an author row: whose post is embedded. Top-level cards are the profile
+  // owner's own activity, so their author is shown elsewhere on the page.
+  const author = depth > 0 ? renderAuthor(item.author) : "";
 
   return `<article class="stream-card" data-uri="${escapeHtml(
     item.uri
-  )}"${styleAttr}>${renderCardLink(item)}${head}${body}${media}${link}${subject}</article>`;
+  )}"${styleAttr}>${renderCardLink(item)}${author}${head}${body}${media}${link}${subject}</article>`;
 }
 
 /**
@@ -747,6 +751,32 @@ function renderExternalLink(link: StreamExternalLink | undefined): string {
     : "";
   const title = link.title ? escapeHtml(link.title) : compactUrl(link.url);
   return `<a class="stream-link" href="${href}" target="_blank" rel="noopener">${thumb}<span class="stream-link-title">${title}</span></a>`;
+}
+
+// --- author (nested subject cards) -----------------------------------------
+
+/**
+ * Author identity row for a nested subject card (the quoted / reposted /
+ * replied-to original post): avatar + display name + handle, so the reader sees
+ * whose post is embedded. Returns "" when the VM carries no author or no
+ * displayable identity. The avatar URL is validated + escaped by `safeUrl`.
+ */
+function renderAuthor(author: StreamCardVM["author"]): string {
+  if (!author) return "";
+  const name = author.displayName ?? author.handle;
+  const avatarUrl = author.avatar ? safeUrl(author.avatar) : null;
+  if (!name && !avatarUrl) return "";
+  const avatar = avatarUrl
+    ? `<img class="stream-subject-avatar" src="${avatarUrl}" alt="" loading="lazy" decoding="async" width="20" height="20">`
+    : "";
+  const nameHtml = name ? `<span class="stream-subject-name">${escapeHtml(name)}</span>` : "";
+  // Append the "@handle" only when a distinct display name precedes it, so a
+  // handle-only author is not shown twice.
+  const handleHtml =
+    author.displayName && author.handle
+      ? `<span class="stream-subject-handle">@${escapeHtml(author.handle)}</span>`
+      : "";
+  return `<div class="stream-subject-author">${avatar}<span class="stream-subject-identity">${nameHtml}${handleHtml}</span></div>`;
 }
 
 // --- subject (repost / reply / quote target) -------------------------------
