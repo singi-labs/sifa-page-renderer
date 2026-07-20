@@ -6,6 +6,7 @@ import {
   renderHome,
   renderSectionPage,
   renderSinglePage,
+  renderActivityPage,
   type AcademicProfile,
   type RenderedSection,
 } from "./render";
@@ -219,6 +220,40 @@ describe("renderSinglePage", () => {
     const html = renderSinglePage(PROFILE, []);
     expect(html).toContain("hashchange");
     expect(html).toContain("activate(location.hash.replace('#','')||'index')");
+  });
+});
+
+describe("dev banner", () => {
+  it("renders the in-development banner with a report link when ctx.devBanner is set", () => {
+    const html = renderSinglePage(PROFILE, SECTIONS, { devBanner: true });
+    expect(html).toContain('class="dev-banner"');
+    expect(html).toContain("Sifa ID personal pages are still in development.");
+    expect(html).toContain('href="https://github.com/singi-labs/sifa-workspace/issues"');
+    expect(html).toContain('id="dev-banner-dismiss"');
+    // guard (head) + dismiss (body) scripts both key off this storage key.
+    expect(html).toContain("sifa-page-banner-dismissed");
+  });
+
+  it("omits the banner and its scripts entirely when devBanner is not set", () => {
+    const html = renderSinglePage(PROFILE, SECTIONS);
+    expect(html).not.toContain("dev-banner");
+    expect(html).not.toContain("sifa-page-banner-dismissed");
+  });
+
+  it("shows the banner on the activity (Now) page too", () => {
+    const html = renderActivityPage(PROFILE, SECTIONS, [], { devBanner: true });
+    expect(html).toContain('class="dev-banner"');
+  });
+
+  it("stamps the CSP nonce on the banner scripts", () => {
+    const html = renderSinglePage(PROFILE, SECTIONS, { devBanner: true, nonce: "n0" });
+    // The pre-paint guard and the dismiss handler both reference the key.
+    const keyCount = html.split("sifa-page-banner-dismissed").length - 1;
+    expect(keyCount).toBe(2);
+    // Every <script> tag, the two banner ones included, carries the nonce.
+    for (const tag of html.match(/<script[^>]*>/g) ?? []) {
+      expect(tag).toContain('nonce="n0"');
+    }
   });
 });
 

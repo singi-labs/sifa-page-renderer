@@ -53,6 +53,17 @@ a { color:var(--link); }
 [data-theme="dark"] .brand-logo-light { display:none; }
 [data-theme="dark"] .brand-logo-dark { display:block; }
 
+/* "In development" disclaimer banner (page.sifa.id only). Amber-tinted, sits
+   above the masthead. Hidden pre-paint when dismissed (data-devbanner=off). */
+html[data-devbanner="off"] .dev-banner { display:none; }
+.dev-banner { background:color-mix(in srgb, var(--star) 14%, var(--bg)); border-bottom:1px solid color-mix(in srgb, var(--star) 42%, var(--border)); color:var(--fg); font-size:0.85rem; }
+.dev-banner-inner { max-width:1100px; margin:0 auto; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:0.35rem 0.9rem; padding:0.45rem 1rem; }
+.dev-banner-text { font-weight:500; }
+.dev-banner-report { display:inline-flex; align-items:center; gap:0.3rem; color:var(--link); text-decoration:none; }
+.dev-banner-report:hover { text-decoration:underline; }
+.dev-banner-dismiss { display:inline-flex; align-items:center; justify-content:center; width:1.4rem; height:1.4rem; padding:0; border:0; border-radius:999px; background:none; color:var(--muted); cursor:pointer; }
+.dev-banner-dismiss:hover { color:var(--fg); }
+
 /* masthead + horizontal top nav (academicpages-style) */
 .masthead { border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; background:var(--bg); }
 .masthead-inner {

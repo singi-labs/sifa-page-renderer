@@ -119,6 +119,14 @@ export interface RenderContext {
    */
   nonce?: string;
   /**
+   * When true, renders an "in development" disclaimer banner at the very top of
+   * every page, with a dismiss control (remembered ~30 days via localStorage)
+   * and a link to report issues on GitHub. Used by page.sifa.id to set
+   * expectations while the personal-page feature matures; self-hosted builds
+   * leave it off so the banner and its inline scripts are omitted entirely.
+   */
+  devBanner?: boolean;
+  /**
    * When set, injects a "Now" activity-stream nav item into every page's nav
    * (masthead + mobile bottom nav) so the separate activity page rendered by
    * {@link renderActivityPage} is reachable from the home page and each section
@@ -858,9 +866,14 @@ function layout(opts: {
     profile,
     ctx
   )}
-  <script${nonceAttr}>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();</script>
+  <script${nonceAttr}>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();</script>${
+    ctx?.devBanner
+      ? `\n  <script${nonceAttr}>(function(){try{var r=localStorage.getItem('sifa-page-banner-dismissed');if(r&&Date.now()-Number(r)<2592000000){document.documentElement.dataset.devbanner='off';}}catch(e){}})();</script>`
+      : ""
+  }
 </head>
 <body>
+  ${ctx?.devBanner ? devBanner() : ""}
   ${masthead(entries, activeSlug, paths)}
   <div class="shell">
     ${sidebar(profile)}
@@ -899,6 +912,10 @@ ${main}
   </footer>
   ${bottomNav(entries, activeSlug)}
   <script${nonceAttr}>document.getElementById('theme-toggle').addEventListener('click',function(){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t);}catch(e){}});</script>${
+    ctx?.devBanner
+      ? `\n  <script${nonceAttr}>(function(){var b=document.getElementById('dev-banner-dismiss');if(b)b.addEventListener('click',function(){try{localStorage.setItem('sifa-page-banner-dismissed',String(Date.now()));}catch(e){}var el=document.getElementById('dev-banner');if(el)el.remove();});})();</script>`
+      : ""
+  }${
     entries.length > BOTTOM_NAV_SLOTS ? bottomNavScript(nonceAttr) : ""
   }${ctx?.singlePage ? singlePageScript(nonceAttr) : ""}
 </body>
@@ -1076,6 +1093,36 @@ function svgSun(): string {
 
 function svgMoon(): string {
   return '<svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z"/></svg>';
+}
+
+/** GitHub issues target for the "in development" banner's report link. */
+const DEV_BANNER_REPORT_URL =
+  "https://github.com/singi-labs/sifa-workspace/issues";
+
+function svgInfo(): string {
+  return '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>';
+}
+
+function svgClose(): string {
+  return '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+}
+
+/**
+ * "In development" disclaimer banner shown at the top of every page.sifa.id
+ * personal page. Static markup: an info/report link to GitHub and a dismiss
+ * button. The dismiss (localStorage, ~30 days) is progressive enhancement wired
+ * up in {@link layout}; with JS off the banner simply stays visible.
+ */
+function devBanner(): string {
+  return (
+    `<aside class="dev-banner" id="dev-banner" aria-label="Feature status">` +
+    `<div class="dev-banner-inner">` +
+    `<span class="dev-banner-text">Sifa ID personal pages are still in development.</span>` +
+    `<a class="dev-banner-report" href="${DEV_BANNER_REPORT_URL}" target="_blank" rel="noopener" aria-label="Report an issue on GitHub">` +
+    `${svgInfo()}<span>Report an issue</span></a>` +
+    `<button type="button" class="dev-banner-dismiss" id="dev-banner-dismiss" aria-label="Dismiss this notice">${svgClose()}</button>` +
+    `</div></aside>`
+  );
 }
 
 // --- re-exports (public API surface) ----------------------------------------
