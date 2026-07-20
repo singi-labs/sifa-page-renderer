@@ -24,7 +24,7 @@ import type { RenderedSection } from "./sections.js";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
 import { renderHeatmap, type HeatmapDataInput } from "./heatmap.js";
 import type { StreamCardVM, SectionGroupId } from "@singi-labs/sifa-sdk";
-import { ALL_SECTIONS, SECTION_GROUPS } from "@singi-labs/sifa-sdk";
+import { ALL_SECTIONS, SECTION_GROUPS, normalizePlatformId } from "@singi-labs/sifa-sdk";
 
 // Section id -> nav group, straight from the SDK's single source of truth so
 // the personal-site nav groups exactly like the main sifa.id profile.
@@ -235,11 +235,12 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 function linkLabel(label?: string | null, platform?: string | null): string {
   if (label) return label;
-  if (platform)
-    return (
-      PLATFORM_LABELS[platform] ??
-      platform.charAt(0).toUpperCase() + platform.slice(1)
-    );
+  if (platform) {
+    // Normalize synonyms (e.g. `activitypub` -> `fediverse`) so the derived
+    // label matches the brand mark rather than a capitalized raw id.
+    const key = normalizePlatformId(platform).toLowerCase();
+    return PLATFORM_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+  }
   return "Link";
 }
 
@@ -305,7 +306,9 @@ const SIFA_ATSIGN_PATHS = [
 const SIFA_ICON = `<svg class="side-link-icon" viewBox="0 0 256 256" width="16" height="16" aria-hidden="true"><g transform="matrix(0.333333,0,0,0.333333,37.583333,37.083333)" fill="currentColor" fill-rule="evenodd"><path d="${SIFA_ATSIGN_PATHS[0]}"/><path d="${SIFA_ATSIGN_PATHS[1]}"/></g><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"><path d="M176,47.75 L208,79.75 L176,111.75 L144,79.75 Z" stroke-width="12"/><path d="M80,144 L112,176 L80,208 L48,176 Z" stroke-width="12"/><path d="M152,192 L176,160 L200,192" stroke-width="11"/></g></svg>`;
 
 function linkIcon(platform?: string | null): string {
-  const key = (platform ?? "").toLowerCase();
+  // Normalize synonyms (e.g. keytrace's `activitypub` -> `fediverse`) so they
+  // resolve to the right brand mark instead of the generic globe.
+  const key = normalizePlatformId(platform ?? "").toLowerCase();
   if (key === "bsky" || key === "bluesky") {
     return `<svg class="side-link-icon" viewBox="0 0 600 530" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="${BLUESKY_ICON_PATH}"/></svg>`;
   }

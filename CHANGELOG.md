@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.28
+
+### Patch Changes
+
+- Normalize fediverse platform synonyms in sidebar links. Accounts surfaced with the `activitypub` (or `mastodon`) platform now resolve to the ActivityPub logo and "Fediverse" label via the SDK's `normalizePlatformId`, instead of a generic globe and a raw capitalized id.
+
 ## 0.2.27
 
 ### Patch Changes

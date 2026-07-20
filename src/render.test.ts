@@ -314,6 +314,24 @@ describe("sidebar icons", () => {
     expect(html).not.toContain("M23.268 5.313");
   });
 
+  it("treats an activitypub-platform account as fediverse (icon + label)", () => {
+    // Keytrace/keyoxide proofs surface the platform as `activitypub`, a synonym
+    // the SDK normalizes to `fediverse`. Without a custom label it should read
+    // "Fediverse", not the capitalized "Activitypub".
+    const html = renderHome(
+      {
+        handle: "j",
+        externalAccounts: [
+          { platform: "activitypub", url: "https://mstdn.social/@j" },
+        ],
+      },
+      []
+    );
+    expect(html).toContain("M10.91 4.442L0 10.74"); // ActivityPub mark
+    expect(html).toContain("Fediverse");
+    expect(html).not.toContain(">Activitypub<");
+  });
+
   it("falls back to a globe for an unknown / custom-website platform", () => {
     const html = renderHome(
       { handle: "j", website: "https://jane.example" },
@@ -637,12 +655,12 @@ describe("sidebar links: title instead of label + raw URL", () => {
       {
         ...PROFILE,
         externalAccounts: [
-          { platform: "mastodon", url: "https://example.social/@x" },
+          { platform: "friendster", url: "https://example.social/@x" },
         ],
       },
       []
     );
-    expect(html).toContain(">Mastodon<");
+    expect(html).toContain(">Friendster<");
   });
 });
 
