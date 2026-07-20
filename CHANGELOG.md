@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.23
+
+### Patch Changes
+
+- c21461b: Add left margin to the verification "Verified" badge so it no longer butts against the profile name on Now-page cards.
+
 ## 0.2.22
 
 ### Patch Changes
