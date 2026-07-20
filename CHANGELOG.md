@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.25
+
+### Patch Changes
+
+- 30b9eb0: Use the ActivityPub logo for fediverse links in the sidebar. Fediverse and ActivityPub accounts now render the ActivityPub mark (monochrome, following the page theme) instead of the generic Fediverse glyph.
+
 ## 0.2.24
 
 ### Patch Changes
