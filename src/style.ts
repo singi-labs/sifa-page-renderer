@@ -27,10 +27,13 @@ export function getCSS(opts?: CSSOptions): string {
 :root, [data-theme="light"] {
   --bg:#fffcf0; --fg:#1c1b1a; --muted:#6b6862; --border:#e4e0d6; --card:#fff; --link:#2a5db0;
   --star:#c99700; --diff-add:#1a7f37; --diff-del:#cf222e; --verified:#1a7f37;
+  /* ATproto app dominant-app heatmap colours (mirrors sifa-web globals.css). */
+  --app-bluesky-stripe: oklch(0.55 0.17 230); --app-tangled-stripe: oklch(0.55 0.15 160); --app-smokesignal-stripe: oklch(0.58 0.18 50); --app-flashes-stripe: oklch(0.55 0.2 350); --app-whitewind-stripe: oklch(0.45 0.02 260); --app-frontpage-stripe: oklch(0.5 0.22 290); --app-picosky-stripe: oklch(0.55 0.2 350); --app-linkat-stripe: oklch(0.55 0.15 160); --app-pastesphere-stripe: oklch(0.58 0.16 75); --app-kipclip-stripe: oklch(0.55 0.12 180); --app-standard-stripe: oklch(0.5 0.08 270); --app-keytrace-stripe: oklch(0.52 0.14 140); --app-aetheros-stripe: oklch(0.5 0.15 300); --app-roomy-stripe: oklch(0.55 0.14 30); --app-popfeed-stripe: oklch(0.55 0.22 280); --app-streamplace-stripe: oklch(0.55 0.18 350); --app-semble-stripe: oklch(0.52 0.14 200); --app-grain-stripe: oklch(0.55 0.14 85); --app-statusphere-stripe: oklch(0.6 0.18 95); --app-youandme-stripe: oklch(0.55 0.18 10); --app-anisota-stripe: oklch(0.55 0.18 135); --app-margin-stripe: oklch(0.5 0.14 265); --app-beaconbits-stripe: oklch(0.6 0.18 27); --app-bookhive-stripe: oklch(0.58 0.14 60); --app-colibri-stripe: oklch(0.58 0.14 195); --app-collectivesocial-stripe: oklch(0.58 0.18 70); --app-crate-stripe: oklch(0.52 0.12 138); --app-kich-stripe: oklch(0.58 0.08 65); --app-recipe-stripe: oklch(0.64 0.2 40); --app-aetherdocs-stripe: oklch(0.6 0.15 163); --app-passports-stripe: oklch(0.62 0.16 45); --app-asq-stripe: oklch(0.62 0.16 75); --app-spark-stripe: oklch(0.6 0.27 345); --app-nooki-stripe: oklch(0.78 0.15 90); --app-atstore-stripe: oklch(0.5 0.17 265); --app-plyr-stripe: oklch(0.58 0.18 155); --app-github-stripe: #238636; --app-rss-stripe: oklch(0.68 0.18 45); --app-orcid-stripe: oklch(0.8 0.16 118); --app-leaflet-stripe: oklch(0.55 0.16 145); --app-pckt-stripe: oklch(0.55 0.18 25); --app-offprint-stripe: oklch(0.55 0.16 200); --app-atfund-stripe: oklch(0.59 0.14 158); --app-atmorsvp-stripe: oklch(0.58 0.12 185); --app-opensocial-stripe: oklch(0.55 0.15 235); --app-kevara-stripe: oklch(0.55 0.22 325); --app-marque-stripe: oklch(0.58 0.2 289); --app-atcr-stripe: oklch(0.55 0.13 183); --app-mcp-stripe: oklch(0.55 0.16 277); --app-userinput-stripe: oklch(0.55 0.16 13); --app-minomobi-stripe: oklch(0.55 0.16 293); --app-voxport-stripe: oklch(0.55 0.16 233); --app-badges-stripe: oklch(0.55 0.16 90); --app-atvouch-stripe: oklch(0.55 0.16 165); --app-watsm-stripe: oklch(0.55 0.056 255); --app-plonk-stripe: oklch(0.55 0.16 70); --app-alternativeproto-stripe: oklch(0.55 0.16 262); --app-papili-stripe: oklch(0.55 0.16 182); --app-vit-stripe: oklch(0.55 0.16 300); --app-lifepo-stripe: oklch(0.55 0.16 354); --app-streamthought-stripe: oklch(0.55 0.16 210); --app-waow-stripe: oklch(0.55 0.16 25); --app-lichen-stripe: oklch(0.55 0.16 128); --app-fallback-stripe: oklch(0.5 0.01 260); --heatmap-empty: oklch(0.95 0.003 250);
 }
 [data-theme="dark"] {
   --bg:#181714; --fg:#f0ede2; --muted:#a59f93; --border:#34322b; --card:#232118; --link:#9db8f8;
   --star:#e3b341; --diff-add:#3fb950; --diff-del:#f85149; --verified:#3fb950;
+  --app-bluesky-stripe: oklch(0.6 0.17 230); --app-tangled-stripe: oklch(0.6 0.15 160); --app-smokesignal-stripe: oklch(0.63 0.18 50); --app-flashes-stripe: oklch(0.6 0.2 350); --app-whitewind-stripe: oklch(0.5 0.02 260); --app-frontpage-stripe: oklch(0.55 0.22 290); --app-picosky-stripe: oklch(0.6 0.2 350); --app-linkat-stripe: oklch(0.6 0.15 160); --app-pastesphere-stripe: oklch(0.63 0.16 75); --app-kipclip-stripe: oklch(0.6 0.12 180); --app-standard-stripe: oklch(0.55 0.08 270); --app-keytrace-stripe: oklch(0.57 0.14 140); --app-aetheros-stripe: oklch(0.55 0.15 300); --app-roomy-stripe: oklch(0.6 0.14 30); --app-popfeed-stripe: oklch(0.65 0.22 280); --app-streamplace-stripe: oklch(0.6 0.18 350); --app-semble-stripe: oklch(0.57 0.14 200); --app-grain-stripe: oklch(0.6 0.14 85); --app-statusphere-stripe: oklch(0.65 0.18 95); --app-youandme-stripe: oklch(0.6 0.18 10); --app-anisota-stripe: oklch(0.6 0.18 135); --app-margin-stripe: oklch(0.62 0.14 265); --app-beaconbits-stripe: oklch(0.65 0.18 27); --app-bookhive-stripe: oklch(0.62 0.14 60); --app-colibri-stripe: oklch(0.62 0.14 195); --app-collectivesocial-stripe: oklch(0.62 0.18 70); --app-crate-stripe: oklch(0.62 0.12 138); --app-kich-stripe: oklch(0.7 0.07 65); --app-recipe-stripe: oklch(0.72 0.19 40); --app-aetherdocs-stripe: oklch(0.72 0.15 163); --app-passports-stripe: oklch(0.68 0.15 45); --app-asq-stripe: oklch(0.68 0.15 75); --app-spark-stripe: oklch(0.7 0.25 345); --app-nooki-stripe: oklch(0.82 0.14 90); --app-atstore-stripe: oklch(0.62 0.17 265); --app-plyr-stripe: oklch(0.65 0.18 155); --app-github-stripe: #2ea043; --app-rss-stripe: oklch(0.72 0.17 45); --app-orcid-stripe: oklch(0.82 0.16 118); --app-leaflet-stripe: oklch(0.6 0.16 145); --app-pckt-stripe: oklch(0.6 0.18 25); --app-offprint-stripe: oklch(0.6 0.16 200); --app-atfund-stripe: oklch(0.66 0.14 158); --app-atmorsvp-stripe: oklch(0.68 0.12 185); --app-opensocial-stripe: oklch(0.66 0.15 235); --app-kevara-stripe: oklch(0.68 0.2 325); --app-marque-stripe: oklch(0.65 0.18 289); --app-atcr-stripe: oklch(0.62 0.13 183); --app-mcp-stripe: oklch(0.65 0.15 277); --app-userinput-stripe: oklch(0.65 0.15 13); --app-minomobi-stripe: oklch(0.65 0.15 293); --app-voxport-stripe: oklch(0.65 0.15 233); --app-badges-stripe: oklch(0.65 0.15 90); --app-atvouch-stripe: oklch(0.65 0.15 165); --app-watsm-stripe: oklch(0.65 0.052 255); --app-plonk-stripe: oklch(0.65 0.15 70); --app-alternativeproto-stripe: oklch(0.65 0.15 262); --app-papili-stripe: oklch(0.65 0.15 182); --app-vit-stripe: oklch(0.65 0.15 300); --app-lifepo-stripe: oklch(0.65 0.15 354); --app-streamthought-stripe: oklch(0.65 0.15 210); --app-waow-stripe: oklch(0.65 0.15 25); --app-lichen-stripe: oklch(0.65 0.15 128); --app-fallback-stripe: oklch(0.55 0.01 260); --heatmap-empty: oklch(0.2 0.005 250);
 }
 * { box-sizing:border-box; }
 html { color-scheme: light dark; }
@@ -198,19 +201,30 @@ a { color:var(--link); }
    changed. Per-item theme colors arrive as the inline custom properties
    --stream-card-bg / --stream-card-fg / --stream-accent, each falling back to
    the site tokens when absent. */
-/* Activity heatmap header (mirrors sifa-web's /activity Activity Bar: the four
-   intensity levels use --link at the same 0.3 / 0.55 / 0.8 / 1.0 opacities). */
-.now-heatmap { margin:0 0 1.75rem; }
+/* Activity heatmap header (mirrors sifa-web's /activity Activity Bar: month +
+   weekday axes, per-app dominant colours via --app-<id>-stripe at the shared
+   0.3 / 0.55 / 0.8 / 1.0 opacity ramp, and an app-colour legend). */
+.now-heatmap { margin:0 0 1.75rem; --hm-size:11px; --hm-gap:3px; }
 .heatmap-stats { display:flex; flex-wrap:wrap; align-items:center; gap:0.35rem 1.2rem; font-size:0.85rem; margin:0 0 0.7rem; }
 .heatmap-stat-total { font-weight:700; }
 .heatmap-stat-app, .heatmap-stat-count { color:var(--muted); }
-.heatmap-grid { display:grid; grid-auto-flow:column; grid-template-rows:repeat(7,1fr); gap:3px; overflow-x:auto; padding-bottom:0.2rem; }
-.heatmap-cell { width:11px; height:11px; border-radius:2px; background:var(--heatmap-empty, color-mix(in srgb, var(--fg) 8%, transparent)); }
-.heatmap-cell.heat-lvl-1 { background:color-mix(in srgb, var(--link) 30%, transparent); }
-.heatmap-cell.heat-lvl-2 { background:color-mix(in srgb, var(--link) 55%, transparent); }
-.heatmap-cell.heat-lvl-3 { background:color-mix(in srgb, var(--link) 80%, transparent); }
-.heatmap-cell.heat-lvl-4 { background:var(--link); }
+.heatmap-cal-scroll { overflow-x:auto; padding-bottom:0.2rem; }
+.heatmap-cal { display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; gap:4px 6px; width:max-content; }
+.heatmap-corner { grid-column:1; grid-row:1; }
+.heatmap-months { grid-column:2; grid-row:1; display:grid; grid-template-columns:repeat(var(--hm-weeks,26),var(--hm-size)); gap:0 var(--hm-gap); font-size:0.68rem; color:var(--muted); }
+.heatmap-month { grid-row:1; white-space:nowrap; }
+.heatmap-weekdays { grid-column:1; grid-row:2; display:grid; grid-template-rows:repeat(7,var(--hm-size)); gap:var(--hm-gap); font-size:0.68rem; color:var(--muted); padding-right:2px; }
+.heatmap-weekday { line-height:var(--hm-size); white-space:nowrap; }
+.heatmap-grid { grid-column:2; grid-row:2; display:grid; grid-auto-flow:column; grid-template-rows:repeat(7,var(--hm-size)); grid-auto-columns:var(--hm-size); gap:var(--hm-gap); }
+.heatmap-cell { width:var(--hm-size); height:var(--hm-size); border-radius:2px; background:var(--heatmap-empty, color-mix(in srgb, var(--fg) 8%, transparent)); }
+.heatmap-cell.heat-lvl-1 { background:color-mix(in srgb, var(--cell, var(--link)) 30%, transparent); }
+.heatmap-cell.heat-lvl-2 { background:color-mix(in srgb, var(--cell, var(--link)) 55%, transparent); }
+.heatmap-cell.heat-lvl-3 { background:color-mix(in srgb, var(--cell, var(--link)) 80%, transparent); }
+.heatmap-cell.heat-lvl-4 { background:var(--cell, var(--link)); }
 .heatmap-cell.heatmap-cell-future { background:transparent; }
+.heatmap-legend { display:flex; flex-wrap:wrap; align-items:center; gap:0.15rem 0.85rem; margin:0.6rem 0 0; font-size:0.75rem; color:var(--muted); }
+.heatmap-legend-item { display:inline-flex; align-items:center; gap:0.35rem; }
+.heatmap-legend-dot { width:0.5rem; height:0.5rem; border-radius:999px; background:var(--app-fallback-stripe); flex:none; }
 
 .activity-stream { display:flex; flex-direction:column; gap:1.75rem; margin:0.4rem 0 0; }
 .stream-empty { color:var(--muted); margin:0.4rem 0; }

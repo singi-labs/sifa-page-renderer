@@ -80,10 +80,86 @@ describe("renderHeatmap", () => {
     expect(html).toContain('class="heatmap-cell heat-lvl-2"');
   });
 
-  it("labels active cells with an accessible date + count title", () => {
+  it("gives active cells a per-app hover breakdown with the total", () => {
     const html = renderHeatmap(data(), { now: NOW });
-    expect(html).toContain('title="2026-07-14: 5 activities"');
-    expect(html).toContain('title="2026-07-18: 2 activities"');
+    // 2026-07-14: one app (5 Bluesky), 5 total.
+    expect(html).toContain("Jul 14, 2026");
+    expect(html).toContain("5 Bluesky");
+    expect(html).toContain("5 total");
+    // 2026-07-18: two apps, 2 total.
+    expect(html).toContain("1 Bluesky");
+    expect(html).toContain("1 GitHub");
+    expect(html).toContain("2 total");
+  });
+
+  it("labels empty in-range days as 'No activity'", () => {
+    const html = renderHeatmap(data(), { now: NOW, daysBack: 21 });
+    expect(html).toContain("No activity");
+  });
+
+  it("colours cells by the day's dominant app", () => {
+    const html = renderHeatmap(
+      data({
+        days: [
+          { date: "2026-07-14", total: 5, apps: [{ appId: "bluesky", count: 5 }] },
+          {
+            date: "2026-07-16",
+            total: 4,
+            apps: [
+              { appId: "github", count: 3 },
+              { appId: "bluesky", count: 1 },
+            ],
+          },
+        ],
+      }),
+      { now: NOW }
+    );
+    expect(html).toContain("--cell:var(--app-bluesky-stripe, var(--app-fallback-stripe))");
+    expect(html).toContain("--cell:var(--app-github-stripe, var(--app-fallback-stripe))");
+  });
+
+  it("renders month + weekday axis labels", () => {
+    const html = renderHeatmap(data(), { now: NOW, daysBack: 60 });
+    expect(html).toContain('class="heatmap-weekday" style="grid-row:1">Mon');
+    expect(html).toContain('class="heatmap-weekday" style="grid-row:3">Wed');
+    expect(html).toContain('class="heatmap-weekday" style="grid-row:5">Fri');
+    expect(html).toContain('class="heatmap-month"');
+    // The window spans June -> July, so both month abbreviations appear.
+    expect(html).toContain(">Jul</span>");
+    expect(html).toContain(">Jun</span>");
+  });
+
+  it("renders an app-colour legend keyed by the stripe palette", () => {
+    const html = renderHeatmap(data(), { now: NOW });
+    expect(html).toContain('class="heatmap-legend"');
+    expect(html).toContain(
+      'class="heatmap-legend-dot" style="background:var(--app-bluesky-stripe, var(--app-fallback-stripe))"'
+    );
+    expect(html).toContain("Bluesky");
+    expect(html).toContain("GitHub");
+  });
+
+  it("caps the legend at six apps", () => {
+    const many = data({
+      appTotals: Array.from({ length: 9 }, (_, i) => ({
+        appId: `app${i}`,
+        appName: `App ${i}`,
+        total: 9 - i,
+      })),
+    });
+    const html = renderHeatmap(many, { now: NOW });
+    const dots = html.match(/class="heatmap-legend-dot"/g) ?? [];
+    expect(dots.length).toBe(6);
+  });
+
+  it("escapes app names in the legend", () => {
+    const xss = data({
+      appTotals: [{ appId: "x", appName: '<b>x</b>', total: 5 }],
+    });
+    const html = renderHeatmap(xss, { now: NOW });
+    expect(html).toContain('class="heatmap-legend"');
+    expect(html).not.toContain("<b>x</b>");
+    expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
   });
 
   it("emits a grid whose cell count is a multiple of 7 (full week columns)", () => {
