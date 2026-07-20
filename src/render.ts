@@ -270,6 +270,11 @@ const PLATFORM_ICON_PATHS: Record<string, string> = {
   orcid:
     "M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 0 1-.947-.947c0-.525.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.025-5.325 5.025h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 4.022-2.484 4.022-3.722 0-2.016-1.284-3.722-4.097-3.722h-2.222z",
   rss: "M19.199 24C19.199 13.467 10.533 4.8 0 4.8V0c13.165 0 24 10.835 24 24h-4.801zM3.291 17.415c1.814 0 3.293 1.479 3.293 3.295 0 1.813-1.485 3.29-3.301 3.29C1.47 24 0 22.526 0 20.71s1.475-3.294 3.291-3.295zM15.909 24h-4.665c0-6.169-5.075-11.245-11.244-11.245V8.09c8.727 0 15.909 7.184 15.909 15.91z",
+  // ActivityPub logo (Simple Icons, CC0), the same mark sifa-web renders for
+  // fediverse accounts. The platform spans Mastodon, GoToSocial, Pleroma, etc.,
+  // so the protocol logo is used rather than a Mastodon-specific mark.
+  fediverse:
+    "M10.91 4.442L0 10.74v2.52L8.727 8.22v10.077l2.182 1.26zM6.545 12l-4.364 2.52 4.364 2.518zm6.545-2.52L17.455 12l-4.364 2.52zm0-5.038L24 10.74v2.52l-10.91 6.298v-2.52L21.819 12 13.091 6.96z",
   youtube:
     "M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z",
   twitter:
@@ -299,15 +304,6 @@ const SIFA_ATSIGN_PATHS = [
 ];
 const SIFA_ICON = `<svg class="side-link-icon" viewBox="0 0 256 256" width="16" height="16" aria-hidden="true"><g transform="matrix(0.333333,0,0,0.333333,37.583333,37.083333)" fill="currentColor" fill-rule="evenodd"><path d="${SIFA_ATSIGN_PATHS[0]}"/><path d="${SIFA_ATSIGN_PATHS[1]}"/></g><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"><path d="M176,47.75 L208,79.75 L176,111.75 L144,79.75 Z" stroke-width="12"/><path d="M80,144 L112,176 L80,208 L48,176 Z" stroke-width="12"/><path d="M152,192 L176,160 L200,192" stroke-width="11"/></g></svg>`;
 
-// ActivityPub logo symbol (viewBox 0 0 34.395832 34.395832, unlike the 24x24
-// marks above), from the Wikimedia Commons "ActivityPub-logo-symbol.svg" (CC0).
-// Rendered monochrome in currentColor so it follows the light/dark toggle and
-// sits alongside the other sidebar glyphs, and handled separately in linkIcon()
-// for its distinct viewBox, like the Bluesky butterfly and the Sifa mark. The
-// nested transforms are the logo's original placement, kept intact rather than
-// hand-flattened. Used for fediverse / ActivityPub links.
-const ACTIVITYPUB_ICON = `<svg class="side-link-icon" viewBox="0 0 34.395832 34.395832" width="16" height="16" aria-hidden="true"><g fill="currentColor" fill-rule="evenodd" transform="translate(7.1437516,141.67967)"><g transform="translate(-4.2352716,0.01824528)"><g transform="matrix(0.9789804,0,0,0.9789804,-3157.9561,1202.4422)"><g transform="matrix(0.2553682,0,0,0.2553682,2615.9213,-1125.3113)"><path d="m 2450.431,-937.13662 51.9615,30 v 12 l -51.9615,30 v -12 l 41.5693,-24 -41.5692,-24 z"/><path d="m 2450.431,-913.13662 20.7847,12 -20.7847,12 z"/></g></g><g transform="matrix(0.9789804,0,0,0.9789804,-3157.9561,1202.4422)"><path transform="matrix(0.27026418,0,0,0.27026418,3225.7603,-1228.2597)" d="M 49.097656,-504.56641 0,-476.2207 v 11.33789 l 39.277344,-22.67578 v 45.35351 l 9.820312,5.66992 z m -19.638672,34.01563 -19.6406246,11.33789 19.6406246,11.33789 z"/></g></g></g></svg>`;
-
 function linkIcon(platform?: string | null): string {
   const key = (platform ?? "").toLowerCase();
   if (key === "bsky" || key === "bluesky") {
@@ -315,9 +311,6 @@ function linkIcon(platform?: string | null): string {
   }
   if (key === "sifa") {
     return SIFA_ICON;
-  }
-  if (key === "fediverse" || key === "activitypub") {
-    return ACTIVITYPUB_ICON;
   }
   const d = PLATFORM_ICON_PATHS[key];
   if (d) {
