@@ -244,7 +244,7 @@ describe("renderActivityStream: subject (repost/reply target)", () => {
 });
 
 describe("renderActivityStream: source link", () => {
-  it("renders a 'View on {source}' link to sourceUrl, opening in a new tab", () => {
+  it("makes the whole card a link to sourceUrl, opening in a new tab", () => {
     const html = renderActivityStream(
       [
         vm({
@@ -253,7 +253,7 @@ describe("renderActivityStream: source link", () => {
       ],
       { now: NOW }
     );
-    expect(html).toContain('class="stream-source-link"');
+    expect(html).toContain('class="stream-card-link"');
     expect(html).toContain(
       'href="https://bsky.app/profile/gui.do/post/abc"'
     );
@@ -264,7 +264,7 @@ describe("renderActivityStream: source link", () => {
 
   it("renders no source link when the VM has no sourceUrl", () => {
     const html = renderActivityStream([vm()], { now: NOW });
-    expect(html).not.toContain("stream-source-link");
+    expect(html).not.toContain("stream-card-link");
     expect(html).not.toContain("View on");
   });
 
@@ -274,7 +274,7 @@ describe("renderActivityStream: source link", () => {
       { now: NOW }
     );
     expect(html).not.toContain("javascript:");
-    expect(html).not.toContain("stream-source-link");
+    expect(html).not.toContain("stream-card-link");
   });
 
   it("escapes a quote-breakout attempt in sourceUrl", () => {

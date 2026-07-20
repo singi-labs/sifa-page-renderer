@@ -149,7 +149,7 @@ function renderCard(
   const head = `<div class="stream-head">${source}${renderVerb(
     item,
     ctx
-  )}${time}${renderSourceLink(item)}</div>`;
+  )}${time}</div>`;
   const isRich = item.body ? RICH_KINDS.has(item.body.kind) : false;
   const body = renderBody(item, ctx);
   // Rich variants render their own cover/link inside the body; suppress the
@@ -162,7 +162,7 @@ function renderCard(
 
   return `<article class="stream-card" data-uri="${escapeHtml(
     item.uri
-  )}"${styleAttr}>${head}${body}${media}${link}${subject}</article>`;
+  )}"${styleAttr}>${renderCardLink(item)}${head}${body}${media}${link}${subject}</article>`;
 }
 
 /**
@@ -179,17 +179,18 @@ function renderVerb(item: StreamCardVM, ctx: StreamRenderCtx): string {
 }
 
 /**
- * A trailing "View on {source.label}" link to the record on its origin app.
- * Rendered only when the VM carries a scheme-valid `sourceUrl`. Kept in the meta
- * row (never wrapping the whole card) so it can't nest inside the card's other
- * links; opens in a new tab. `sourceUrl` is scheme-validated + escaped via
- * `safeUrl`; the label text is HTML-escaped.
+ * A stretched overlay link making the whole card clickable to the record on its
+ * origin app (rendered only when the VM carries a scheme-valid `sourceUrl`).
+ * Positioned `inset:0` via CSS; the card's other interactive elements (the
+ * embedded reply/repost subject, external links) sit above it with a higher
+ * z-index so they stay independently clickable. Opens in a new tab. `sourceUrl`
+ * is scheme-validated + escaped; the aria-label text is HTML-escaped.
  */
-function renderSourceLink(item: StreamCardVM): string {
+function renderCardLink(item: StreamCardVM): string {
   const href = safeUrl(item.sourceUrl ?? null);
   if (!href) return "";
   const label = escapeHtml(`View on ${item.source.label}`);
-  return `<a class="stream-source-link" href="${href}" target="_blank" rel="noopener">${label}<span class="stream-source-link-glyph" aria-hidden="true">↗</span></a>`;
+  return `<a class="stream-card-link" href="${href}" target="_blank" rel="noopener" aria-label="${label}"></a>`;
 }
 
 /**

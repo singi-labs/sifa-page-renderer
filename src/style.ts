@@ -206,10 +206,16 @@ a { color:var(--link); }
   color:var(--muted); margin:0 0 0.1rem; font-weight:700;
 }
 .stream-card {
+  position:relative;
   background:var(--stream-card-bg, var(--card)); color:var(--stream-card-fg, var(--fg));
   border:1px solid var(--border); border-left:3px solid var(--stream-accent, var(--border));
   border-radius:8px; padding:0.85rem 1rem;
 }
+.stream-card:hover { border-color:var(--stream-accent, var(--link)); }
+/* Stretched overlay link: the whole card opens the source record. Inner links
+   (embedded subject, external links, verb) sit above it and stay clickable. */
+.stream-card-link { position:absolute; inset:0; z-index:1; border-radius:inherit; }
+.stream-card :is(a:not(.stream-card-link), button) { position:relative; z-index:2; }
 .stream-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; }
 /* App icon (brand logo or category glyph) at the card's top-left. */
 .stream-source {
@@ -225,10 +231,6 @@ a { color:var(--link); }
 .stream-verb { color:var(--muted); font-size:0.82rem; }
 .stream-verb-link { color:var(--muted); text-decoration:none; }
 .stream-verb-link:hover { color:var(--link); text-decoration:underline; }
-/* "View on {source}" affordance: trailing meta-row link to the origin app. */
-.stream-source-link { display:inline-flex; align-items:center; gap:0.2rem; color:var(--muted); font-size:0.8rem; text-decoration:none; white-space:nowrap; }
-.stream-source-link:hover { color:var(--link); text-decoration:underline; }
-.stream-source-link-glyph { font-size:0.9em; }
 .stream-text { margin:0.4rem 0 0; word-break:break-word; }
 .stream-track { margin:0.4rem 0 0; font-weight:700; }
 .stream-media { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.6rem 0 0; }
@@ -245,6 +247,7 @@ a { color:var(--link); }
 .stream-link-thumb { width:48px; height:48px; object-fit:cover; border-radius:4px; flex:0 0 auto; }
 .stream-link-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 .stream-subject {
+  position:relative; z-index:2;
   margin:0.6rem 0 0; padding:0.5rem 0.7rem; border-left:2px solid var(--border);
   background:var(--bg); border-radius:0 6px 6px 0; font-size:0.92em;
 }
