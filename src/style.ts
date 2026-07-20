@@ -286,7 +286,7 @@ a { color:var(--link); }
   background:var(--bg); border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.5rem;
 }
 .stream-badge-quiet { color:var(--muted); }
-.stream-badge-verified { color:var(--verified); border-color:var(--verified); }
+.stream-badge-verified { color:var(--verified); border-color:var(--verified); margin-left:0.4rem; }
 
 .stream-stars {
   display:inline-flex; align-items:center; gap:0.35rem; margin:0.3rem 0 0; font-size:0.86rem;
