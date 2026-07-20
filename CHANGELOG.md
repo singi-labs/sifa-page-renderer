@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.26
+
+### Patch Changes
+
+- Render the ActivityPub logo for fediverse links using the shared Simple Icons mark, the same icon sifa-web shows for fediverse accounts.
+
 ## 0.2.25
 
 ### Patch Changes

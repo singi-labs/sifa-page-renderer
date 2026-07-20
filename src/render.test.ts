@@ -308,10 +308,9 @@ describe("sidebar icons", () => {
       },
       []
     );
-    // The ActivityPub logo symbol carries its own viewBox, like the Bluesky
-    // butterfly, so assert on that distinctive box.
-    expect(html).toContain('viewBox="0 0 34.395832 34.395832"');
-    // and the old simple-icons Fediverse glyph is gone.
+    // The ActivityPub mark (Simple Icons), the same logo sifa-web renders.
+    expect(html).toContain("M10.91 4.442L0 10.74");
+    // and the old Fediverse glyph is gone.
     expect(html).not.toContain("M23.268 5.313");
   });
 
