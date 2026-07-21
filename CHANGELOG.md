@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.32
+
+### Patch Changes
+
+- 8f1a64b: Point the footer's "Start your own website for free" link at the personal-website docs (docs.sifa.id/docs/personal-website) instead of the sifa.id homepage, which has no path to the personal-website feature.
+
 ## 0.2.31
 
 ### Patch Changes
