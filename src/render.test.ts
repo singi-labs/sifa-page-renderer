@@ -228,7 +228,9 @@ describe("dev banner", () => {
     const html = renderSinglePage(PROFILE, SECTIONS, { devBanner: true });
     expect(html).toContain('class="dev-banner"');
     expect(html).toContain("Sifa ID personal pages are still in development.");
-    expect(html).toContain('href="https://github.com/singi-labs/sifa-workspace/issues"');
+    expect(html).toContain(
+      'href="https://github.com/singi-labs/sifa-workspace/issues"'
+    );
     expect(html).toContain('id="dev-banner-dismiss"');
     // guard (head) + dismiss (body) scripts both key off this storage key.
     expect(html).toContain("sifa-page-banner-dismissed");
@@ -246,7 +248,10 @@ describe("dev banner", () => {
   });
 
   it("stamps the CSP nonce on the banner scripts", () => {
-    const html = renderSinglePage(PROFILE, SECTIONS, { devBanner: true, nonce: "n0" });
+    const html = renderSinglePage(PROFILE, SECTIONS, {
+      devBanner: true,
+      nonce: "n0",
+    });
     // The pre-paint guard and the dismiss handler both reference the key.
     const keyCount = html.split("sifa-page-banner-dismissed").length - 1;
     expect(keyCount).toBe(2);
@@ -411,6 +416,46 @@ describe("getCSS / CSS", () => {
     // The submenu opens on pointer hover AND :focus-within (keyboard Tab).
     expect(css).toMatch(/\.nav-group:hover .nav-group-menu/);
     expect(css).toMatch(/\.nav-group:focus-within .nav-group-menu/);
+  });
+
+  it("keeps the source pill and time on one line, truncating the verb instead", () => {
+    const css = getCSS();
+    // The pill and time never wrap mid-phrase ("Bluesky / network", "10d / ago")
+    // and never shrink; the verb is the only flexible item and it ellipsizes.
+    expect(css).toMatch(/\.stream-source \{[^}]*white-space:nowrap/);
+    expect(css).toMatch(/\.stream-source \{[^}]*flex:0 0 auto/);
+    expect(css).toMatch(/\.stream-time \{[^}]*white-space:nowrap/);
+    expect(css).toMatch(/\.stream-time \{[^}]*flex:0 0 auto/);
+    expect(css).toMatch(/\.stream-verb \{[^}]*text-overflow:ellipsis/);
+    expect(css).toMatch(/\.stream-verb \{[^}]*min-width:0/);
+  });
+
+  it("lets a long embedded handle shrink so it cannot overflow the page", () => {
+    const css = getCSS();
+    // A 30-character handle (@patches.pds.witchcraft.systems) used to take its
+    // full intrinsic width, squeezing the display name to a few characters and
+    // pushing the card wider than the viewport (horizontal scroll on /now).
+    expect(css).toMatch(
+      /\.stream-subject-identity \.stream-subject-handle \{[^}]*text-overflow:ellipsis/
+    );
+    expect(css).toMatch(
+      /\.stream-subject-identity \.stream-subject-handle \{[^}]*min-width:0/
+    );
+  });
+
+  it("stacks the embedded author name and handle on narrow screens", () => {
+    const mobile = getCSS().split("@media (max-width:760px)")[1] ?? "";
+    // Name on the first row, handle on the second -- neither is truncated at
+    // typical lengths on a phone.
+    expect(mobile).toMatch(
+      /\.stream-subject-identity \{[^}]*flex-direction:column/
+    );
+    // A bespoke verb keeps its information by taking its own row, rather than
+    // being truncated to nothing next to the pill and time.
+    expect(mobile).toMatch(/\.stream-head \{[^}]*flex-wrap:wrap/);
+    expect(mobile).toMatch(/\.stream-verb \{[^}]*flex-basis:100%/);
+    // Only a verb that repeats the card title is dropped outright.
+    expect(mobile).toMatch(/\.stream-verb-generic \{[^}]*display:none/);
   });
 });
 
@@ -605,7 +650,11 @@ describe("sidebar: Sifa ID link + link ordering", () => {
       {
         handle: "jane.bsky.social",
         externalAccounts: [
-          { label: "GitHub", platform: "github", url: "https://github.com/jane" },
+          {
+            label: "GitHub",
+            platform: "github",
+            url: "https://github.com/jane",
+          },
           {
             label: "My Site",
             platform: "website",

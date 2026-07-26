@@ -459,7 +459,43 @@ describe("renderActivityStream: permalink injection", () => {
     const html = renderActivityStream([vm()], { now: NOW });
     expect(html).toContain("posted on Bluesky");
     expect(html).not.toContain("stream-verb-link");
-    expect(html).toContain('<span class="stream-verb">posted on Bluesky</span>');
+    expect(html).toContain(
+      '<span class="stream-verb stream-verb-generic">posted on Bluesky</span>'
+    );
+  });
+
+  it("marks a verb that only repeats the title as generic", () => {
+    // "posted on Bluesky" is the VM's own title -- it adds nothing the pill and
+    // body do not already say, so the mobile stylesheet drops it.
+    const html = renderActivityStream([vm()], { now: NOW });
+    expect(html).toContain("stream-verb-generic");
+  });
+
+  it("does not mark a bespoke verb as generic", () => {
+    // "Merged a pull request" appears nowhere else on the card, so it must
+    // survive at every viewport width.
+    const html = renderActivityStream(
+      [
+        vm({
+          title: "activity on GitHub",
+          body: {
+            kind: "github-pr",
+            repoOwner: "singi-labs",
+            repoName: "sifa-web",
+            prNumber: 7,
+            title: "Fix the thing",
+            additions: 10,
+            deletions: 2,
+            mergedAt: "2026-07-17T09:00:00.000Z",
+          },
+        }),
+      ],
+      { now: NOW }
+    );
+    expect(html).toContain(
+      '<span class="stream-verb">Merged a pull request</span>'
+    );
+    expect(html).not.toContain("stream-verb-generic");
   });
 });
 
@@ -548,7 +584,7 @@ describe("renderActivityStream: verb in the meta line", () => {
     // ends with the app name) and before the time.
     expect(html).toContain('class="stream-head"');
     expect(html).toContain(
-      'Bluesky</span><span class="stream-verb">posted on Bluesky</span>'
+      'Bluesky</span><span class="stream-verb stream-verb-generic">posted on Bluesky</span>'
     );
     // ...and there is no longer a separate title line.
     expect(html).not.toContain('class="stream-title"');
@@ -562,7 +598,7 @@ describe("renderActivityStream: verb in the meta line", () => {
       permalink: (item) => `https://page.sifa.id/gui.do/p/${item.cid}`,
     });
     expect(html).toContain(
-      '<a class="stream-verb stream-verb-link" href="https://page.sifa.id/gui.do/p/bafycid1">'
+      '<a class="stream-verb stream-verb-generic stream-verb-link" href="https://page.sifa.id/gui.do/p/bafycid1">'
     );
   });
 });
@@ -662,7 +698,7 @@ describe("renderActivityStream: rich typed variants", () => {
       ],
       { now: NOW }
     );
-    expect(html).toContain('<span class="stream-verb">Read</span>');
+    expect(html).toContain('<span class="stream-verb stream-verb-generic">Read</span>');
     expect(html).toContain("Reading");
   });
 

@@ -175,11 +175,19 @@ function renderCard(
  * variant has no better phrasing. Linked to the item permalink when supplied.
  */
 function renderVerb(item: StreamCardVM, ctx: StreamRenderCtx): string {
-  const text = escapeHtml(cardVerb(item));
+  const verb = cardVerb(item);
+  const text = escapeHtml(verb);
+  // A verb that fell back to the VM's own title ("posted on Bluesky") repeats
+  // what the source pill and the body already convey, so the mobile stylesheet
+  // drops it to keep the pill and time on one line. A bespoke phrase ("Merged a
+  // pull request") is the only place that information appears on the card, so it
+  // survives at every width -- hence a marker class instead of hiding all verbs.
+  const cls =
+    verb === item.title ? "stream-verb stream-verb-generic" : "stream-verb";
   const href = ctx.permalink ? safeUrl(ctx.permalink(item) ?? null) : null;
   return href
-    ? `<a class="stream-verb stream-verb-link" href="${href}">${text}</a>`
-    : `<span class="stream-verb">${text}</span>`;
+    ? `<a class="${cls} stream-verb-link" href="${href}">${text}</a>`
+    : `<span class="${cls}">${text}</span>`;
 }
 
 /**
