@@ -402,9 +402,16 @@ html[data-devbanner="off"] .dev-banner { display:none; }
   .footer-links { margin-left:0; }
 
   /* Activity cards: a phone-width card cannot hold pill + verb + time on one
-     line, nor name + handle side by side. Drop the verb (the card is already a
-     stretched link to the source record) and give the handle its own row. */
-  .stream-verb { display:none; }
+     line, nor name + handle side by side. The pill and time keep the first row;
+     a verb worth showing wraps onto its own row rather than truncating to a
+     couple of characters. */
+  .stream-head { flex-wrap:wrap; gap:0.15rem 0.6rem; }
+  .stream-source { order:1; }
+  .stream-time { order:2; }
+  .stream-verb { order:3; flex-basis:100%; }
+  /* A verb that only repeats the card title is dropped outright -- it costs a
+     row and says nothing the pill and body do not. */
+  .stream-verb-generic { display:none; }
   /* align-items:stretch (not flex-start) so the stacked name/handle inherit the
      row's width and their ellipsis actually engages -- a flex-start child sizes
      to fit-content, and a long display name would still overflow the page. */

@@ -450,8 +450,12 @@ describe("getCSS / CSS", () => {
     expect(mobile).toMatch(
       /\.stream-subject-identity \{[^}]*flex-direction:column/
     );
-    // The verb is dropped so the pill + time fit on a single line.
-    expect(mobile).toMatch(/\.stream-verb \{[^}]*display:none/);
+    // A bespoke verb keeps its information by taking its own row, rather than
+    // being truncated to nothing next to the pill and time.
+    expect(mobile).toMatch(/\.stream-head \{[^}]*flex-wrap:wrap/);
+    expect(mobile).toMatch(/\.stream-verb \{[^}]*flex-basis:100%/);
+    // Only a verb that repeats the card title is dropped outright.
+    expect(mobile).toMatch(/\.stream-verb-generic \{[^}]*display:none/);
   });
 });
 
