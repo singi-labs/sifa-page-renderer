@@ -260,19 +260,31 @@ html[data-devbanner="off"] .dev-banner { display:none; }
    (embedded subject, external links, verb) sit above it and stay clickable. */
 .stream-card-link { position:absolute; inset:0; z-index:1; border-radius:inherit; }
 .stream-card :is(a:not(.stream-card-link), button) { position:relative; z-index:2; }
-.stream-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; }
-/* App icon (brand logo or category glyph) at the card's top-left. */
+.stream-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; min-width:0; }
+/* App icon (brand logo or category glyph) at the card's top-left.
+   Fixed-size and nowrap: the pill must never break mid-label ("Bluesky /
+   network") when the head row runs out of room -- the verb absorbs the shrink. */
 .stream-source {
   display:inline-flex; align-items:center; gap:0.3rem; font-size:0.74rem; font-weight:700;
   color:var(--muted); background:var(--bg); border:1px solid var(--border);
   border-radius:999px; padding:0.05rem 0.5rem;
+  white-space:nowrap; flex:0 0 auto;
 }
 /* Category glyph inside the source pill, before the app name. */
 .stream-source-glyph { display:inline-flex; }
 .stream-source-glyph svg { width:14px; height:14px; display:block; }
-.stream-time { color:var(--muted); font-size:0.8rem; margin-left:auto; }
-/* The verb is metadata, not content: muted + small, set apart from post text. */
-.stream-verb { color:var(--muted); font-size:0.82rem; }
+/* Same deal as the pill: "10d ago" stays on one line. */
+.stream-time {
+  color:var(--muted); font-size:0.8rem; margin-left:auto;
+  white-space:nowrap; flex:0 0 auto;
+}
+/* The verb is metadata, not content: muted + small, set apart from post text.
+   It is the only flexible item in the head row, so it truncates rather than
+   wrapping when the pill + time already fill the width. */
+.stream-verb {
+  color:var(--muted); font-size:0.82rem;
+  min-width:0; flex:0 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 .stream-verb-link { color:var(--muted); text-decoration:none; }
 .stream-verb-link:hover { color:var(--link); text-decoration:underline; }
 .stream-text { margin:0.4rem 0 0; word-break:break-word; }
@@ -298,10 +310,17 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 .stream-subject .stream-card { border:none; border-radius:0; background:none; padding:0; }
 .stream-subject-handle { color:var(--muted); }
 /* Author row on an embedded subject card: whose post is quoted/reposted/replied to. */
-.stream-subject-author { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.3rem; }
+.stream-subject-author { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.3rem; min-width:0; }
 .stream-subject-avatar { width:20px; height:20px; border-radius:50%; object-fit:cover; flex:none; }
-.stream-subject-identity { display:flex; align-items:baseline; gap:0.3rem; min-width:0; font-size:0.9em; }
-.stream-subject-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stream-subject-identity { display:flex; align-items:baseline; gap:0.3rem; min-width:0; font-size:0.9em; flex:0 1 auto; }
+.stream-subject-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; }
+/* Scoped to the identity row (not the standalone person-subject card, where the
+   handle is inline text that should stay wrappable): a long handle must shrink
+   like the name does, or it takes its full intrinsic width -- squeezing the
+   name to a few characters and pushing the card past the viewport. */
+.stream-subject-identity .stream-subject-handle {
+  min-width:0; flex:0 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 /* "Replying to" caption above the embedded original post (reply cards only). */
 .stream-reply-label { margin:0.6rem 0 0; color:var(--muted); font-size:0.82rem; font-weight:700; }
 .stream-reply-label + .stream-subject { margin-top:0.2rem; }
@@ -381,6 +400,15 @@ html[data-devbanner="off"] .dev-banner { display:none; }
   .main { padding:1.5rem 1.25rem 2.5rem; }
   .site-footer { padding:1.4rem 1.25rem 2.5rem; }
   .footer-links { margin-left:0; }
+
+  /* Activity cards: a phone-width card cannot hold pill + verb + time on one
+     line, nor name + handle side by side. Drop the verb (the card is already a
+     stretched link to the source record) and give the handle its own row. */
+  .stream-verb { display:none; }
+  /* align-items:stretch (not flex-start) so the stacked name/handle inherit the
+     row's width and their ellipsis actually engages -- a flex-start child sizes
+     to fit-content, and a long display name would still overflow the page. */
+  .stream-subject-identity { flex-direction:column; align-items:stretch; gap:0; }
 
   /* Leave room for the fixed bottom bar so it never covers content/footer. */
   body { padding-bottom:calc(58px + env(safe-area-inset-bottom,0px)); }
