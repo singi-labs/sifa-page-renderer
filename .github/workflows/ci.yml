@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # GitHub-hosted by default -- this repo has no self-hosted runners (unlike
+    # sifa-sdk). Set the CI_RUNNER repo/org variable to move it to one later
+    # without editing this file.
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: npm
+
+      # --ignore-scripts skips dependency lifecycle scripts (supply-chain
+      # surface) and this package's own `prepare: tsup`; the Build step below
+      # compiles explicitly. esbuild resolves through its platform-specific
+      # optional dependencies, so it needs no install script.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
