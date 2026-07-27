@@ -1,0 +1,46 @@
+name: Canary
+
+# Dogfooding check: build against the LATEST published @singi-labs/* packages,
+# ignoring the lockfile. The regular CI job installs from the lockfile so that
+# builds stay reproducible; this job deliberately does not, so a breaking
+# publish surfaces here within a day instead of on a consumer's deploy.
+#
+# It is intentionally NOT a required status check -- it is allowed to go red
+# without blocking PRs. Red here means "our own latest package broke us",
+# which is information, not a merge gate.
+
+on:
+  schedule:
+    # 05:20 UTC daily. Off the hour to avoid GitHub's peak-of-hour queueing.
+    - cron: "20 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+
+      - name: Install (lockfile)
+        run: npm ci --ignore-scripts
+
+      - name: Upgrade first-party packages to latest
+        run: |
+          npm install --ignore-scripts --no-save @singi-labs/sifa-sdk@latest
+          echo "resolved: $(node -p "require('@singi-labs/sifa-sdk/package.json').version")"
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
