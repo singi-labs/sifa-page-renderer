@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.34
+
+### Patch Changes
+
+- a2f058b: Emit at-tags `at:canonical` and `at:author` meta tags when `ctx.did` is set, mapping rendered pages back to the AT record they are built from.
+
 ## 0.2.33
 
 ### Patch Changes
