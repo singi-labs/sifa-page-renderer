@@ -155,6 +155,22 @@ export interface RenderContext {
    * section links). When omitted, the nav is byte-identical to today.
    */
   profileHomeHref?: string;
+  /**
+   * DID of the account this page renders. When set, emits the at-tags
+   * community proposal's `at:canonical` and `at:author` meta tags, mapping the
+   * page back to the AT record it is built from
+   * (https://tangled.org/chrisshank.com/at-tags/).
+   *
+   * `at:canonical` points at `id.sifa.profile.self` because deleting that
+   * record is what would make this page cease to exist -- the spec's test for
+   * canonical. Per-section records are NOT emitted as `at:alternate`: a filled
+   * profile spans 13+ collections and the proposal gives no guidance yet for
+   * pages that aggregate many records.
+   *
+   * Ignored unless it parses as a DID (`did:<method>:<id>`), so a handle passed
+   * here by mistake produces no tags rather than a bogus AT URI.
+   */
+  did?: string;
 }
 
 /** Nav configuration for the activity ("Now") page. */
@@ -761,6 +777,28 @@ function ogTags(og?: OpenGraphMeta): string {
   return tags.length ? "\n  " + tags.join("\n  ") : "";
 }
 
+// AT record backing every page this renderer emits. Collection + rkey are
+// fixed: Sifa writes the profile record at rkey `self`.
+const PROFILE_RECORD_PATH = "id.sifa.profile.self/self";
+
+// did:<method>:<method-specific-id>, per the DID Core syntax. Deliberately
+// strict -- the characters excluded here (quotes, angle brackets, whitespace)
+// are the ones that would let a crafted value escape the meta attribute.
+const DID_RE = /^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/;
+
+/**
+ * at-tags meta tags mapping this page back to its AT record. Emits nothing
+ * unless `did` is a syntactically valid DID. See {@link RenderContext.did}.
+ */
+function atTags(did?: string): string {
+  if (!did || !DID_RE.test(did)) return "";
+  const uri = escapeHtml(`at://${did}`);
+  return (
+    `\n  <meta name="at:canonical" content="${uri}/${PROFILE_RECORD_PATH}">` +
+    `\n  <meta name="at:author" content="${uri}">`
+  );
+}
+
 /**
  * Validate a URL's scheme (http/https only) and return it RAW (unescaped),
  * for use in JSON contexts where JSON.stringify handles escaping. `safeUrl`
@@ -859,7 +897,7 @@ function layout(opts: {
     ctx?.canonical
       ? `\n  <link rel="canonical" href="${escapeHtml(ctx.canonical)}">`
       : ""
-  }
+  }${atTags(ctx?.did)}
   <link rel="icon" href="${paths.favicon}" type="image/svg+xml">
   <link rel="preconnect" href="https://cdn.bsky.app">
   <link rel="stylesheet" href="${paths.css}">${ogTags(ctx?.og)}${personJsonLd(
