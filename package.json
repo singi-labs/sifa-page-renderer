@@ -49,6 +49,7 @@
     "prepare": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "knip": "knip",
     "test": "vitest run --max-workers=2",
     "changeset": "changeset",
     "version-packages": "changeset version",
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.31.0",
+    "knip": "6.29.0",
     "tsup": "8.5.1",
     "typescript": "5.9.3",
     "vitest": "^4.1.8"
