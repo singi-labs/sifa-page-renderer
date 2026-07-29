@@ -968,3 +968,51 @@ describe("SEO meta + JSON-LD", () => {
     expect(html).not.toContain('name="description"');
   });
 });
+
+describe("at-tags (AT URI meta tags)", () => {
+  const DID = "did:plc:zcanytzlaumjwgaopolw6wes";
+
+  it("emits at:canonical and at:author from the did", () => {
+    const html = renderHome(PROFILE, [], { did: DID });
+    expect(html).toContain(
+      `<meta name="at:canonical" content="at://${DID}/id.sifa.profile.self/self">`
+    );
+    expect(html).toContain(`<meta name="at:author" content="at://${DID}">`);
+  });
+
+  it("emits the tags on every page type", () => {
+    for (const html of [
+      renderSectionPage(PROFILE, SECTIONS[0], SECTIONS, { did: DID }),
+      renderSinglePage(PROFILE, SECTIONS, { did: DID }),
+      renderActivityPage(PROFILE, SECTIONS, [], { did: DID }),
+    ]) {
+      expect(html).toContain('name="at:canonical"');
+      expect(html).toContain('name="at:author"');
+    }
+  });
+
+  it("omits the tags when no did is provided", () => {
+    const html = renderHome(PROFILE, [], {});
+    expect(html).not.toContain('name="at:');
+  });
+
+  it("accepts did:web as well as did:plc", () => {
+    const html = renderHome(PROFILE, [], { did: "did:web:jane.example" });
+    expect(html).toContain(
+      '<meta name="at:canonical" content="at://did:web:jane.example/id.sifa.profile.self/self">'
+    );
+  });
+
+  it("rejects a malformed did rather than emitting a bogus AT URI", () => {
+    for (const bad of ["jane.bsky.social", "did:", "did:plc:", "", "  "]) {
+      expect(renderHome(PROFILE, [], { did: bad })).not.toContain('name="at:');
+    }
+  });
+
+  it("does not let a crafted did break out of the meta attribute", () => {
+    const html = renderHome(PROFILE, [], {
+      did: 'did:web:x"><script>alert(1)</script>',
+    });
+    expect(html).not.toContain("<script>alert(1)");
+  });
+});

@@ -220,6 +220,31 @@ const nowHtml = renderActivityPage(profile, sections, vms, ctx);
 // Section links now point at /gui.do and /gui.do#career; "Now" stays /gui.do/now.
 ```
 
+### `ctx.did` -- at-tags AT URI meta tags
+
+Set `ctx.did` to the DID of the account the page renders and every page gains
+the [at-tags](https://tangled.org/chrisshank.com/at-tags/) meta tags, which map
+the HTML back to the AT record it is built from:
+
+```html
+<meta name="at:canonical" content="at://did:plc:xxx/id.sifa.profile.self/self">
+<meta name="at:author" content="at://did:plc:xxx">
+```
+
+`at:canonical` points at `id.sifa.profile.self` because deleting that record is
+what would make the page cease to exist, which is the spec's test for canonical.
+Per-section records are not emitted as `at:alternate`: a filled profile spans
+13+ collections, and the proposal gives no guidance yet for pages that aggregate
+many records.
+
+The value is ignored unless it parses as a DID (`did:<method>:<id>`), so passing
+a handle by mistake emits nothing rather than a bogus AT URI. When omitted, the
+`<head>` is byte-identical to today.
+
+```javascript
+const html = renderHome(profile, sections, { did: 'did:plc:zcanytz...' });
+```
+
 ### `parseSections(md: string): ParsedSection[]`
 
 Parse a markdown string into `##`-keyed sections. Retained for consumers that
