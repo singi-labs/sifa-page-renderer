@@ -27,7 +27,7 @@ import { buildProfileSections, renderHome, renderSectionPage } from '@singi-labs
 import { CSS } from '@singi-labs/sifa-page-renderer/style';
 
 // Fetch the structured profile from sifa.id
-const profile = await fetchProfile({ baseUrl: 'https://sifa.id' }, 'your-handle.bsky.social');
+const profile = await fetchProfile({ baseUrl: 'https://sifa.id' }, 'your-username.bsky.social');
 
 // Build sections from the structured profile (About + Career + ... , Links excluded)
 const sections = buildProfileSections(profile);
@@ -238,7 +238,7 @@ Per-section records are not emitted as `at:alternate`: a filled profile spans
 many records.
 
 The value is ignored unless it parses as a DID (`did:<method>:<id>`), so passing
-a handle by mistake emits nothing rather than a bogus AT URI. When omitted, the
+a username by mistake emits nothing rather than a bogus AT URI. When omitted, the
 `<head>` is byte-identical to today.
 
 ```javascript
