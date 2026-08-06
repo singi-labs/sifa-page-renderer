@@ -21,6 +21,8 @@
 import { escapeHtml, safeUrl } from "./util.js";
 import { navIcon } from "./section-icons.js";
 import type { RenderedSection } from "./sections.js";
+import type { LocationValue } from "@singi-labs/sifa-sdk";
+import { buildPersonJsonLd } from "@singi-labs/sifa-sdk/jsonld";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
 import { renderHeatmap, type HeatmapDataInput } from "./heatmap.js";
 import type { StreamCardVM, SectionGroupId } from "@singi-labs/sifa-sdk";
@@ -817,41 +819,79 @@ function rawSafeUrl(url: string | undefined | null): string | null {
 }
 
 /**
- * Schema.org `Person` JSON-LD for the profile. Emitted in `<head>` so search
- * engines and agents get structured identity (name, url, image, links,
- * location). Values are user-authored, so `<` is escaped to `<` to
- * prevent a `</script>` breakout even though the block is not executable JS.
+ * Schema.org `Person` JSON-LD for the profile.
+ *
+ * The graph itself is built by `@singi-labs/sifa-sdk/jsonld`, the same emitter
+ * sifa.id uses, so the two surfaces stop describing the same person
+ * differently. This function's job is the parts the SDK deliberately does not
+ * do: validating user-authored URLs before they reach the output, mapping the
+ * renderer's flat location fields onto the SDK shape, and escaping `<` to
+ * `\u003c` so a `</script>` in user text cannot break out of the block.
  */
 function personJsonLd(profile: AcademicProfile, ctx?: RenderContext): string {
-  const name = profile.displayName ?? profile.handle;
-  if (!name) return "";
+  const handle = profile.handle ?? "";
+  if (!profile.displayName && !handle) return "";
 
-  const sameAs = [
+  // The SDK trusts the URLs it is handed, so scheme validation happens here,
+  // before they go in. `sameAs` on the SDK input comes from `verifiedAccounts`.
+  const verifiedAccounts = [
     profile.website,
     ...(profile.externalAccounts ?? []).map((a) => a.url),
   ]
-    .filter((u): u is string => typeof u === "string" && u.length > 0)
-    .map((u) => rawSafeUrl(u))
-    .filter((u): u is string => u !== null);
+    .map((u) => (typeof u === "string" && u.length > 0 ? rawSafeUrl(u) : null))
+    .filter((u): u is string => u !== null)
+    .map((url) => ({ platform: "", identifier: "", url }));
 
-  const loc = locationLine(profile);
-  const person: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    name,
-  };
-  if (ctx?.canonical) person.url = ctx.canonical;
-  if (profile.handle) person.alternateName = `@${profile.handle}`;
-  const avatar = rawSafeUrl(profile.avatar);
-  if (avatar) person.image = avatar;
-  if (profile.headline) person.jobTitle = profile.headline;
-  if (profile.about) person.description = profile.about;
-  if (loc) person.address = { "@type": "PostalAddress", addressLocality: loc };
-  if (sameAs.length) person.sameAs = Array.from(new Set(sameAs));
+  const person = buildPersonJsonLd(
+    {
+      handle,
+      displayName: profile.displayName ?? undefined,
+      headline: profile.headline ?? undefined,
+      about: profile.about ?? undefined,
+      avatar: rawSafeUrl(profile.avatar) ?? undefined,
+      location: locationValue(profile),
+      verifiedAccounts,
+    },
+    { canonicalUrl: ctx?.canonical },
+  );
 
   const json = JSON.stringify(person).replace(/</g, "\\u003c");
   const nonceAttr = ctx?.nonce ? ` nonce="${escapeHtml(ctx.nonce)}"` : "";
   return `\n  <script type="application/ld+json"${nonceAttr}>${json}</script>`;
+}
+
+/**
+ * Map the renderer's several location shapes onto the SDK `LocationValue`.
+ *
+ * When only a preformatted location string exists (the `locations[].location`
+ * case) it is carried in `country`, which is what `formatLocation` renders as
+ * the place name. That yields a `Place` with a name and no `PostalAddress`,
+ * which is honest: we do not know which part of that string is the country.
+ */
+function locationValue(profile: AcademicProfile): LocationValue | null {
+  const primary =
+    profile.locations?.find((l) => l.isPrimary) ??
+    profile.locations?.[0] ??
+    null;
+  if (primary?.location) return { country: primary.location };
+
+  const loc = profile.location;
+  const locality =
+    primary?.locationLocality ??
+    primary?.locationCity ??
+    profile.locationLocality ??
+    profile.locationCity ??
+    loc?.locality ??
+    loc?.city;
+  const region = primary?.locationRegion ?? profile.locationRegion ?? loc?.region;
+  const country = primary?.locationCountry ?? profile.locationCountry ?? loc?.country;
+
+  if (!locality && !region && !country) return null;
+  return {
+    country: country ?? "",
+    ...(locality ? { locality } : {}),
+    ...(region ? { region } : {}),
+  };
 }
 
 function layout(opts: {
