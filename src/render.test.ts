@@ -1016,3 +1016,91 @@ describe("at-tags (AT URI meta tags)", () => {
     expect(html).not.toContain("<script>alert(1)");
   });
 });
+
+describe("Person JSON-LD is built by the SDK", () => {
+  function jsonLd(profile: AcademicProfile, ctx: Record<string, unknown> = {}) {
+    const html = renderHome(profile, [], ctx);
+    const m = html.match(
+      /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/s
+    );
+    return m ? JSON.parse(m[1]!.replace(/\\u003c/g, "<")) : null;
+  }
+
+  const BASE: AcademicProfile = {
+    handle: "alice.example",
+    displayName: "Alice Example",
+    headline: "Researcher",
+    about: "Studies things.",
+  };
+
+  it("uses the page's own canonical for url and @id, not a sifa.id path", () => {
+    // A self-hosted sifa-page can live anywhere; emitting a sifa.id URL would
+    // point at a page that is not there.
+    const ld = jsonLd(BASE, { canonical: "https://alice.example/" });
+    expect(ld.url).toBe("https://alice.example/");
+    expect(ld["@id"]).toBe("https://alice.example/");
+  });
+
+  it("emits the handle as alternateName", () => {
+    expect(jsonLd(BASE).alternateName).toBe("@alice.example");
+  });
+
+  it("carries name, jobTitle and description", () => {
+    const ld = jsonLd(BASE);
+    expect(ld.name).toBe("Alice Example");
+    expect(ld.jobTitle).toBe("Researcher");
+    expect(ld.description).toBe("Studies things.");
+  });
+
+  it("drops non-http(s) URLs before they reach the graph", () => {
+    const ld = jsonLd({
+      ...BASE,
+      website: "javascript:alert(1)",
+      avatar: "javascript:alert(2)",
+      externalAccounts: [
+        { url: "https://github.com/alice" },
+        { url: "data:text/html,x" },
+      ],
+    });
+    expect(ld.sameAs).toEqual(["https://github.com/alice"]);
+    expect(ld.image).toBeUndefined();
+    expect(JSON.stringify(ld)).not.toContain("javascript:");
+    expect(JSON.stringify(ld)).not.toContain("data:text/html");
+  });
+
+  it("escapes < so user text cannot break out of the script block", () => {
+    const html = renderHome({ ...BASE, about: "</script><img src=x>" }, [], {});
+    const m = html.match(
+      /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/s
+    );
+    expect(m![1]).not.toContain("</script");
+    expect(m![1]).toContain("\\u003c");
+  });
+
+  it("emits a Place with a PostalAddress from structured location fields", () => {
+    const ld = jsonLd({ ...BASE, locationLocality: "Utrecht", locationCountry: "Netherlands" });
+    expect(ld.homeLocation).toEqual({
+      "@type": "Place",
+      name: "Utrecht, Netherlands",
+      address: { "@type": "PostalAddress", addressLocality: "Utrecht" },
+    });
+  });
+
+  it("emits a named Place with no address for a preformatted location string", () => {
+    // We do not know which part of the string is the country, so asserting a
+    // PostalAddress would be a guess.
+    const ld = jsonLd({
+      ...BASE,
+      locations: [{ isPrimary: true, location: "Somewhere, Earth" }],
+    });
+    expect(ld.homeLocation).toEqual({ "@type": "Place", name: "Somewhere, Earth" });
+  });
+
+  it("omits homeLocation when no location is known", () => {
+    expect(jsonLd(BASE).homeLocation).toBeUndefined();
+  });
+
+  it("renders nothing when there is neither a display name nor a handle", () => {
+    expect(jsonLd({ headline: "Nobody" })).toBeNull();
+  });
+});
