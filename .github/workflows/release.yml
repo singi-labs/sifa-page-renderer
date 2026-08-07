@@ -1,0 +1,112 @@
+name: Release
+# Opens a "chore: version packages" PR when changesets are pending, and
+# publishes to npm when that PR is merged.
+#
+# Unlike sifa-sdk this repo has no CHANGESETS_TOKEN and no auto-merge
+# workflow, so GITHUB_TOKEN is used for the version PR. Consequence: the
+# version PR has to be merged by a person. That merge is a real push to main,
+# which retriggers this workflow, and the second run publishes. If auto-merge
+# is ever wanted here, add a CHANGESETS_TOKEN secret and swap it in below --
+# GITHUB_TOKEN pushes deliberately do not trigger workflows, so auto-merge
+# would otherwise leave the release hanging.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: npm
+
+      # --ignore-scripts skips dependency lifecycle scripts (supply-chain
+      # surface) and this package's own `prepare: tsup`; the Build step
+      # compiles explicitly, matching ci.yml.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+
+      # Trusted-publisher OIDC auth requires npm >= 11.6.0. Pinned to 11.9.0
+      # rather than @latest because npm 12.0.0 broke `npm publish --provenance`
+      # with "Cannot find module 'sigstore'", which fails every trusted
+      # publish. Revisit when a 12.x patch restores provenance.
+      - name: Pin npm for trusted publishing
+        run: npm install -g --ignore-scripts npm@11.9.0
+
+      # Only the changeset CLI, globally. No project dependencies are installed
+      # in this job, so the job holding the OIDC token never executes arbitrary
+      # package code. The built dist arrives as an artifact instead.
+      - name: Install changesets CLI
+        run: npm install -g --ignore-scripts @changesets/cli@2.31.1
+
+      - name: Download dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      # Fail loudly here rather than letting npm fall back to ENEEDAUTH deep
+      # inside the changesets subprocess, where the real cause is much harder
+      # to read.
+      - name: Verify OIDC environment
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo "::error::OIDC env vars not present - id-token permission missing or not propagated"
+            exit 1
+          fi
+          echo "OIDC env vars present"
+          echo "npm: $(npm --version)"
+          echo "registry: $(npm config get registry)"
+
+      - name: Create release PR or publish
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          # Call the global changeset binary directly; no project install in
+          # this job.
+          version: changeset version
+          publish: node scripts/publish-if-new.mjs
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -53,7 +53,7 @@
     "test": "vitest run --max-workers=2",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "npm run build && changeset publish"
+    "release": "node scripts/publish-if-new.mjs"
   },
   "engines": {
     "node": ">=22"
