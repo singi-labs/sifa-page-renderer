@@ -145,6 +145,14 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 
 .main { padding:2rem 2.5rem 3rem; min-width:0; }
 .page-section[hidden] { display:none; }
+/* Single-page hosts switch sections with an inline script. These :target rules
+   make the same section nav work with JavaScript disabled: hidden by default,
+   the URL-hash section shows, and the index/About section shows when no hash is
+   set (#282). Scoped to .single-page so multi-page files, which render one
+   section per document, are untouched. :target/:has are Baseline. */
+.single-page .page-section { display:none; }
+.single-page .page-section:target { display:block; }
+.single-page:not(:has(.page-section:target)) .page-section#index { display:block; }
 .page-title { font-size:1.6rem; margin:0 0 1rem; padding-bottom:0.4rem; border-bottom:1px solid var(--border); }
 .prose h2 { font-size:1.15rem; margin:1.6rem 0 0.5rem; }
 .prose h3 { font-size:1rem; margin:1.3rem 0 0.4rem; }

@@ -950,7 +950,7 @@ function layout(opts: {
       : ""
   }
 </head>
-<body>
+<body${ctx?.singlePage ? ` class="single-page"` : ""}>
   ${ctx?.devBanner ? devBanner() : ""}
   ${masthead(entries, activeSlug, paths)}
   <div class="shell">
