@@ -242,9 +242,7 @@ describe("dev banner", () => {
     const html = renderSinglePage(PROFILE, SECTIONS, { devBanner: true });
     expect(html).toContain('class="dev-banner"');
     expect(html).toContain("Sifa ID personal pages are still in development.");
-    expect(html).toContain(
-      'href="https://github.com/singi-labs/sifa-workspace/issues"'
-    );
+    expect(html).toContain('href="https://sifa.id/feedback"');
     expect(html).toContain('id="dev-banner-dismiss"');
     // guard (head) + dismiss (body) scripts both key off this storage key.
     expect(html).toContain("sifa-page-banner-dismissed");

@@ -1173,9 +1173,8 @@ function svgMoon(): string {
   return '<svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z"/></svg>';
 }
 
-/** GitHub issues target for the "in development" banner's report link. */
-const DEV_BANNER_REPORT_URL =
-  "https://github.com/singi-labs/sifa-workspace/issues";
+/** Feedback target for the "in development" banner's report link. */
+const DEV_BANNER_REPORT_URL = "https://sifa.id/feedback";
 
 function svgInfo(): string {
   return '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>';
