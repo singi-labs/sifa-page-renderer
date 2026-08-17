@@ -221,6 +221,20 @@ describe("renderSinglePage", () => {
     expect(html).toContain("hashchange");
     expect(html).toContain("activate(location.hash.replace('#','')||'index')");
   });
+
+  it("switches sections with JavaScript disabled via :target CSS (#282)", () => {
+    const html = renderSinglePage(PROFILE, SECTIONS);
+    // The single-page body class scopes the :target rules (in getCSS) so
+    // multi-page files, one section per document, are untouched.
+    expect(html).toMatch(/<body class="single-page">/);
+
+    // With JS off, the URL-hash section shows and the index shows when no hash.
+    const css = getCSS();
+    expect(css).toContain(".single-page .page-section:target");
+    expect(css).toContain(
+      ".single-page:not(:has(.page-section:target)) .page-section#index"
+    );
+  });
 });
 
 describe("dev banner", () => {
