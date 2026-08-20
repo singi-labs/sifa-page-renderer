@@ -31,6 +31,7 @@ import type {
   ProfileHonor,
   ProfileCourse,
   ProfileInvolvement,
+  ProfileInvestment,
   ProfileLanguage,
   ProfilePresentation,
   ProfilePresentationDelivery,
@@ -57,6 +58,9 @@ import {
   CATEGORY_LABELS,
   formatPresentationDuration,
   summarizePresentationDeliveries,
+  getInvestmentRoleLabel,
+  getInvestmentStageLabel,
+  getInvestmentStatusLabel,
   getPresentationRoleLabel,
   getCalendarEventModeLabel,
   EMPLOYMENT_TYPE_LABELS,
@@ -526,6 +530,39 @@ function renderOtherProfiles(): string {
   return '';
 }
 
+/** Whole major currency units with an ISO 4217 code, formatted for display. */
+function formatInvestmentAmount(amount: { value: number; currency: string }): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: amount.currency,
+      maximumFractionDigits: 0,
+    }).format(amount.value);
+  } catch {
+    return `${amount.value.toLocaleString('en-US')} ${amount.currency}`;
+  }
+}
+
+function renderInvestments(profile: Profile): string {
+  const rows = visible(profile.investments).map((inv: ProfileInvestment) => {
+    const name = inv.entityName ?? inv.company;
+    const head = `<strong>${escapeHtml(formatCompanyName(name) || name)}</strong>${whenSpan(
+      formatDateRange(inv.startedAt, inv.endedAt),
+    )}`;
+    const parts = [head];
+    const meta: string[] = [];
+    if (inv.role) meta.push(getInvestmentRoleLabel(inv.role) ?? inv.role);
+    if (inv.stage) meta.push(getInvestmentStageLabel(inv.stage) ?? inv.stage);
+    if (inv.status) meta.push(getInvestmentStatusLabel(inv.status) ?? inv.status);
+    if (inv.amount) meta.push(formatInvestmentAmount(inv.amount));
+    if (inv.via) meta.push(`via ${inv.via}`);
+    if (meta.length) parts.push(`<div class="cv-meta">${escapeHtml(meta.join(' · '))}</div>`);
+    if (inv.description) parts.push(`<div class="cv-desc">${renderMarkdown(inv.description)}</div>`);
+    return `<li class="cv-entry">${parts.join('')}</li>`;
+  });
+  return list(rows);
+}
+
 const SECTION_RENDERERS: Record<SectionId, (profile: Profile) => string> = {
   about: renderAbout,
   career: renderCareer,
@@ -538,6 +575,7 @@ const SECTION_RENDERERS: Record<SectionId, (profile: Profile) => string> = {
   courses: renderCourses,
   awards: renderAwards,
   involvement: renderInvolvement,
+  investments: renderInvestments,
   languages: renderLanguages,
   'other-profiles': renderOtherProfiles,
 };

@@ -116,6 +116,28 @@ describe('buildProfileSections: structured detail', () => {
     expect(projects.html).toContain('<em>neat</em>');
   });
 
+  it('renders an investment with company, amount, date, and Markdown description', () => {
+    const profile = makeProfile({
+      investments: [
+        {
+          rkey: 'i1',
+          company: 'Northwind',
+          role: 'angel',
+          stage: 'seed',
+          status: 'active',
+          amount: { value: 25000, currency: 'EUR' },
+          startedAt: '2021-02',
+          description: 'First **cheque** into the founder.',
+        },
+      ],
+    });
+    const investments = buildProfileSections(profile).find((s) => s.id === 'investments')!;
+    expect(investments.html).toContain('Northwind');
+    expect(investments.html).toContain('Feb 2021');
+    expect(investments.html).toContain('25,000');
+    expect(investments.html).toContain('<strong>cheque</strong>');
+  });
+
   it('groups skills by category using the SDK labels', () => {
     const profile = makeProfile({
       skills: [
