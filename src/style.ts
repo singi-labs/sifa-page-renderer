@@ -152,6 +152,13 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 .prose li { margin-bottom:0.4rem; }
 .prose a { word-break:break-word; }
 
+/* Inline code and fenced blocks. The DOMPurify allowlist in util.ts passes the
+   code and pre tags through, so every Markdown field can carry them. The chip
+   mixes --muted into --bg, so it reads in both themes with no new token. */
+.prose code { font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:85%; background:color-mix(in srgb, var(--muted) 16%, var(--bg)); border-radius:6px; padding:0.2em 0.4em; margin:0; white-space:break-spaces; }
+.prose pre { background:color-mix(in srgb, var(--muted) 16%, var(--bg)); border-radius:6px; padding:1rem; margin:0.8rem 0; overflow:auto; font-size:85%; line-height:1.45; }
+.prose pre code { background:none; border-radius:0; padding:0; font-size:100%; white-space:pre; word-break:normal; }
+
 /* structured CV entries (career, education, publications, ...) built from the
    SDK profile model. Additive: no existing selector is changed. */
 .prose .cv-list { list-style:none; padding-left:0; margin:0.4rem 0 0; }
