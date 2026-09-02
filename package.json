@@ -61,14 +61,14 @@
   "dependencies": {
     "@singi-labs/sifa-sdk": "0.14.1",
     "isomorphic-dompurify": "3.22.0",
-    "marked": "16.4.0"
+    "marked": "18.0.11"
   },
   "devDependencies": {
-    "@changesets/cli": "2.31.0",
-    "knip": "6.29.0",
+    "@changesets/cli": "3.0.1",
+    "knip": "6.33.0",
     "tsup": "8.5.1",
-    "typescript": "5.9.3",
-    "vitest": "^4.1.8"
+    "typescript": "7.0.2",
+    "vitest": "^4.1.11"
   },
   "allowScripts": {
     "esbuild@0.27.7": true,
