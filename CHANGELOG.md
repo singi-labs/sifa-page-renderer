@@ -1,5 +1,26 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.35
+
+### Patch Changes
+
+- 6473a73: Build the Person JSON-LD with `@singi-labs/sifa-sdk/jsonld` instead of by hand.
+
+  sifa.id and a personal site described the same person differently: sifa.id emitted `homeLocation: Place`, this renderer emitted `address: PostalAddress`. Both now use the same emitter, so a fix to one is a fix to both.
+
+  The page's own `canonical` is passed through as `canonicalUrl`, so a self-hosted site keeps its own `url` and `@id` rather than being given a sifa.id path that does not resolve. URL scheme validation still happens here, before values reach the graph, and `<` is still escaped to `<`.
+
+  Visible change: `address` becomes `homeLocation`, and a `@id` is now emitted.
+
+- aace02c: Add `renderHighlights` and render the "Highlights" block below the About section on the single-page personal site (page.sifa.id/{handle}). It features one ongoing or most-recent record per section (talk, publication, career, education, project, involvement) as academicpages-styled cards, driven by the SDK's shared `buildProfileHighlights` so the personal site features the same records as the sifa.id profile page. Callers opt in by passing the profile as `RenderContext.highlights` to `renderSinglePage`; omitting it leaves the output byte-identical. Requires `@singi-labs/sifa-sdk` >= 0.18.17.
+- bf03843: Make single-page section navigation work with JavaScript disabled.
+
+  In single-page mode the sections were switched by an inline script keyed off the URL hash, so with JS off only the default About section showed and the nav links revealed nothing. The single-page document now carries a `single-page` body class, and the stylesheet uses `:target` (plus `:has` for the default section) to show the section named in the URL hash, so the nav works without JS. Multi-page output, which renders one section per document, is untouched.
+
+- 6d5d7a2: Render the `investments` profile section.
+
+  The SDK added an `investments` section (angel cheques, syndicate and LP entries), so `SECTION_RENDERERS` now has a matching renderer: company (canonical entity name when linked), role, stage and status via the SDK label helpers, amount, date range, and a Markdown description. Bumps `@singi-labs/sifa-sdk` to `0.14.1` and `isomorphic-dompurify` to `3.22.0`.
+
 ## 0.2.34
 
 ### Patch Changes
