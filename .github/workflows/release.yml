@@ -103,7 +103,7 @@ jobs:
         # Pinned to v1.x: changesets/action v2 requires Changesets CLI v3, but
         # this repo installs CLI v2.31.1 (below), so v2 errors out at publish.
         # Matches the working sifa-sdk release. Bump both together to move to v2.
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
           # Call the global changeset binary directly; no project install in
           # this job.
