@@ -131,7 +131,7 @@ function renderCareer(profile: Profile): string {
   const items = sortPositions(visible(profile.positions));
   return list(
     items.map((p: ProfilePosition) => {
-      const org = p.entityName ?? p.company;
+      const org = p.agentRef?.name ?? p.entityName ?? p.company;
       const at = org ? ` at ${escapeHtml(formatCompanyName(org))}` : '';
       const head = `<strong>${escapeHtml(p.title ?? '')}${at}</strong>${whenSpan(
         formatDateRange(p.startedAt, p.endedAt),
@@ -308,7 +308,7 @@ function renderCredentials(profile: Profile): string {
   return list(
     items.map((c: ProfileCertification) => {
       if (!c.name) return '';
-      const org = c.entityName ?? c.authority ?? c.issuingOrg;
+      const org = c.agentRef?.name ?? c.entityName ?? c.authority ?? c.issuingOrg;
       const issuer = org ? ` &mdash; ${escapeHtml(formatCompanyName(org))}` : '';
       const when = c.issueDate
         ? ` <span class="cv-when">(${escapeHtml(formatTimelineDate(c.issueDate))})</span>`
@@ -327,7 +327,7 @@ function renderEducation(profile: Profile): string {
   const items = sortEducation(visible(profile.education));
   return list(
     items.map((e: ProfileEducation) => {
-      const inst = formatCompanyName(e.entityName ?? e.institution);
+      const inst = formatCompanyName(e.agentRef?.name ?? e.entityName ?? e.institution);
       const degree = [e.degree, e.fieldOfStudy].filter(Boolean).join(', ');
       const head = `<strong>${escapeHtml(inst)}</strong>${
         degree ? ` &mdash; ${escapeHtml(degree)}` : ''
@@ -356,7 +356,7 @@ function renderCourses(profile: Profile): string {
   const ordered = [...dated, ...undated];
   return list(
     ordered.map((c) => {
-      const inst = c.entityName ?? c.institution;
+      const inst = c.agentRef?.name ?? c.entityName ?? c.institution;
       const issuer = inst ? ` &mdash; ${escapeHtml(formatCompanyName(inst))}` : '';
       const when = c.completedAt
         ? ` <span class="cv-when">(${escapeHtml(formatTimelineDate(c.completedAt))})</span>`
@@ -375,7 +375,7 @@ function renderAwards(profile: Profile): string {
   return list(
     items.map((h: ProfileHonor) => {
       if (!h.title) return '';
-      const org = h.entityName ?? h.issuer;
+      const org = h.agentRef?.name ?? h.entityName ?? h.issuer;
       const issuer = org ? ` &mdash; ${escapeHtml(formatCompanyName(org))}` : '';
       const when = h.date
         ? ` <span class="cv-when">(${escapeHtml(formatTimelineDate(h.date))})</span>`
@@ -391,7 +391,7 @@ function renderInvolvement(profile: Profile): string {
   return groups
     .map((g) => {
       const rows = g.items.map((item: ProfileInvolvement) => {
-        const org = item.entityName ?? item.upstream;
+        const org = item.agentRef?.name ?? item.entityName ?? item.upstream;
         const title = formatCompanyName(org ?? '') || item.role || g.heading;
         const head = `<strong>${escapeHtml(title)}</strong>${whenSpan(
           formatDateRange(item.startedAt, item.endedAt),
@@ -545,7 +545,7 @@ function formatInvestmentAmount(amount: { value: number; currency: string }): st
 
 function renderInvestments(profile: Profile): string {
   const rows = visible(profile.investments).map((inv: ProfileInvestment) => {
-    const name = inv.entityName ?? inv.company;
+    const name = inv.agentRef?.name ?? inv.entityName ?? inv.company;
     const head = `<strong>${escapeHtml(formatCompanyName(name) || name)}</strong>${whenSpan(
       formatDateRange(inv.startedAt, inv.endedAt),
     )}`;
