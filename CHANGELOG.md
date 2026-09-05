@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.36
+
+### Patch Changes
+
+- 2566bb3: Prefer the canonical nested `agentRef.name` for organization labels across career, education, certification, course, honor, involvement, and investment sections, falling back to the legacy flat fields. Bumps the SDK to 0.18.20 for the `agentRef` view-type field (#513).
+
 ## 0.2.35
 
 ### Patch Changes
