@@ -216,6 +216,26 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 .pub-o-doi { display:inline-block; font-size:0.82em; margin-top:0.15rem; }
 .pub-o-date { color:var(--muted); font-size:0.84em; white-space:nowrap; flex:none; }
 
+/* Highlights block (renderHighlights): one ongoing / most-recent record per
+   section, shown below About on the home view. Whole-card links, no JS. Mirrors
+   the sifa.id profile page's Highlights, styled in academicpages tokens. */
+.highlights { margin:2rem 0 0; }
+.highlights-heading { font-size:1.15rem; margin:0 0 0.8rem; }
+.highlights-grid { list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(15rem, 1fr)); gap:0.8rem; }
+.highlight-card { margin:0; min-width:0; }
+.highlight-link { display:flex; flex-direction:column; gap:0.5rem; height:100%; overflow:hidden; text-decoration:none; color:var(--fg); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem; transition:border-color 0.15s ease, background 0.15s ease; }
+.highlight-link:hover { border-color:var(--muted); }
+.highlight-cover { display:block; width:calc(100% + 2rem); max-height:9rem; margin:-0.85rem -1rem 0.25rem; object-fit:contain; background:color-mix(in srgb, var(--muted) 12%, var(--card)); }
+.highlight-top { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+.highlight-label { display:inline-flex; align-items:center; gap:0.4rem; color:var(--muted); font-size:0.8rem; min-width:0; }
+.highlight-label .nav-icon { width:16px; height:16px; flex:0 0 auto; }
+.highlight-pill { flex:none; font-size:0.72rem; font-weight:600; padding:0.1rem 0.5rem; border-radius:999px; white-space:nowrap; border:1px solid var(--border); color:var(--muted); }
+.highlight-pill--upcoming, .highlight-pill--current { color:var(--link); border-color:color-mix(in srgb, var(--link) 40%, var(--border)); background:color-mix(in srgb, var(--link) 10%, var(--card)); }
+.highlight-title { font-weight:600; line-height:1.3; }
+.highlight-link:hover .highlight-title { text-decoration:underline; }
+.highlight-meta { color:var(--muted); font-size:0.85rem; }
+.highlight-date { color:var(--muted); font-size:0.78rem; font-variant-numeric:tabular-nums; margin-top:auto; }
+
 /* activity stream (renderActivityStream). Additive: no existing selector is
    changed. Per-item theme colors arrive as the inline custom properties
    --stream-card-bg / --stream-card-fg / --stream-accent, each falling back to

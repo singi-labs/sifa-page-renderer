@@ -25,8 +25,11 @@ import type { LocationValue } from "@singi-labs/sifa-sdk";
 import { buildPersonJsonLd } from "@singi-labs/sifa-sdk/jsonld";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
 import { renderHeatmap, type HeatmapDataInput } from "./heatmap.js";
-import type { StreamCardVM, SectionGroupId } from "@singi-labs/sifa-sdk";
+import { renderHighlights } from "./highlights.js";
+import type { StreamCardVM, SectionGroupId, ProfileHighlightsInput } from "@singi-labs/sifa-sdk";
 import { ALL_SECTIONS, SECTION_GROUPS, normalizePlatformId } from "@singi-labs/sifa-sdk";
+
+export { renderHighlights } from "./highlights.js";
 
 // Section id -> nav group, straight from the SDK's single source of truth so
 // the personal-site nav groups exactly like the main sifa.id profile.
@@ -95,6 +98,19 @@ export interface RenderContext {
   year?: number | string;
   /** "Site last updated" date string shown in the footer. */
   updated?: string;
+  /**
+   * When set, renders the "Highlights" block (one ongoing / most-recent record
+   * per section) below the About section on the single-page home view. Pass the
+   * profile whose highlights to feature -- the SDK's shared
+   * {@link https://npm.im/@singi-labs/sifa-sdk buildProfileHighlights} selects
+   * and labels the tiles, so the personal site features the same records as the
+   * sifa.id profile page. Only used by {@link renderSinglePage}; omitted ->
+   * byte-identical to a build without highlights. The upcoming/recent split uses
+   * {@link RenderContext.updated} (or the current date) as "today". Typed as the
+   * SDK `ProfileHighlightsInput`, which both `Profile` and the anonymous
+   * public-view profile satisfy.
+   */
+  highlights?: ProfileHighlightsInput;
   /** Path overrides for assets. Defaults match the self-hosted layout. */
   paths?: RenderPaths;
   /** Open Graph meta tags to inject into `<head>`. */
@@ -1104,15 +1120,24 @@ export function renderSinglePage(
     id: string,
     title: string,
     body: string,
-    active: boolean
+    active: boolean,
+    extra = ""
   ) => `
     <section id="${id}" class="page-section"${active ? "" : " hidden"}>
       <h2 class="page-title">${escapeHtml(title)}</h2>
-      <div class="prose">${body}</div>
+      <div class="prose">${body}</div>${extra}
     </section>`;
 
+  // Highlights render below the About prose, inside the home (index) section so
+  // they show and hide with it. Empty string when the profile is too sparse
+  // (the shared shouldRenderHighlights threshold) or when ctx.highlights is
+  // omitted -- then the index section is byte-identical to before.
+  const highlightsHtml = ctx?.highlights
+    ? renderHighlights(ctx.highlights, { today: ctx.updated })
+    : "";
+
   const main = [
-    sectionHtml("index", "About", aboutHtml, true),
+    sectionHtml("index", "About", aboutHtml, true, highlightsHtml),
     ...others.map((s) => sectionHtml(s.slug, s.title, s.html, false)),
   ].join("\n");
 
