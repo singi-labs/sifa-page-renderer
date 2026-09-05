@@ -10,7 +10,28 @@ import {
   type AcademicProfile,
   type RenderedSection,
 } from "./render";
+import type { Profile } from "@singi-labs/sifa-sdk";
 import { getCSS, CSS } from "./style";
+
+/** A Profile fixture with two highlights (career + education), enough to clear
+ * the shared shouldRenderHighlights threshold. */
+function makeHighlightsProfile(): Profile {
+  return {
+    did: "did:plc:jane",
+    handle: "jane.bsky.social",
+    displayName: "Jane Doe",
+    claimed: true,
+    followersCount: 0,
+    followingCount: 0,
+    connectionsCount: 0,
+    skills: [],
+    isOwnProfile: false,
+    positions: [{ rkey: "a", title: "Engineer", entityName: "Acme", startedAt: "2020-01" }],
+    education: [
+      { rkey: "e", institution: "MIT", degree: "BSc", startedAt: "2010-09", endedAt: "2014-06" },
+    ],
+  } as Profile;
+}
 
 const MD_FIXTURE = `## About
 I build things.
@@ -214,6 +235,32 @@ describe("renderSinglePage", () => {
     expect(html).toContain('href="#index"');
     expect(html).toContain('href="#career"');
     expect(html).not.toContain('.html"');
+  });
+
+  it("renders the Highlights block inside the index section when ctx.highlights is set", () => {
+    // A profile with two highlights (career + education) clears the shared
+    // shouldRenderHighlights threshold.
+    const highlights = makeHighlightsProfile();
+    const html = renderSinglePage(PROFILE, SECTIONS, {
+      highlights,
+      updated: "2026-09-04",
+    });
+
+    // Highlights markup is present...
+    expect(html).toContain('class="highlights"');
+    expect(html).toContain(">Highlights<");
+    // ...and it sits inside the index (home) section, before the next section.
+    const indexStart = html.indexOf('<section id="index"');
+    const highlightsAt = html.indexOf('class="highlights"');
+    const careerStart = html.indexOf('<section id="career"');
+    expect(indexStart).toBeGreaterThanOrEqual(0);
+    expect(highlightsAt).toBeGreaterThan(indexStart);
+    expect(highlightsAt).toBeLessThan(careerStart);
+  });
+
+  it("omits the Highlights block when ctx.highlights is not provided", () => {
+    const html = renderSinglePage(PROFILE, SECTIONS);
+    expect(html).not.toContain('class="highlights"');
   });
 
   it("includes the section-switching script", () => {
