@@ -145,6 +145,8 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 
 .main { padding:2rem 2.5rem 3rem; min-width:0; }
 .page-section[hidden] { display:none; }
+/* Keep hash-targeted sections visible below the sticky masthead. */
+.page-section { scroll-margin-top:5rem; }
 /* Single-page hosts switch sections with an inline script. These :target rules
    make the same section nav work with JavaScript disabled: hidden by default,
    the URL-hash section shows, and the index/About section shows when no hash is

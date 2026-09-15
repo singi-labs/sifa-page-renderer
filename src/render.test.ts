@@ -278,6 +278,7 @@ describe("renderSinglePage", () => {
     // With JS off, the URL-hash section shows and the index shows when no hash.
     const css = getCSS();
     expect(css).toContain(".single-page .page-section:target");
+    expect(css).toContain(".page-section { scroll-margin-top:5rem; }");
     expect(css).toContain(
       ".single-page:not(:has(.page-section:target)) .page-section#index"
     );
