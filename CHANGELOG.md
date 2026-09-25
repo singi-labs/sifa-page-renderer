@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.38
+
+### Patch Changes
+
+- 68fa80b: Collapse long publication author lists to the first 10 names plus "and N more", keep the profile owner visible, and put the full list in a native disclosure.
+
 ## 0.2.37
 
 ### Patch Changes
