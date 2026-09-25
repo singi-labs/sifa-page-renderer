@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.41
+
+### Patch Changes
+
+- b27a765: A course's "Part of" line also names the Education entry it was part of ("Degree, Institution"), not only a Career position. Bumps `@singi-labs/sifa-sdk` to 0.19.35.
+
 ## 0.2.40
 
 ### Patch Changes
