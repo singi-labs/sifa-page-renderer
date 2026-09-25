@@ -215,6 +215,10 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 .pub-o-title { font-weight:600; }
 .pub-o-subtitle { color:var(--muted); font-size:0.9em; margin-top:0.1rem; }
 .pub-o-meta, .pub-o-contrib { color:var(--muted); font-size:0.84em; margin-top:0.1rem; }
+.pub-o-contrib-all > summary { font-size:1em; padding:0.15rem 0 0; }
+.pub-o-contrib:has(.pub-o-contrib-all[open]) .pub-o-contrib-short { display:none; }
+.pub-o-contrib-less, .pub-o-contrib-all[open] .pub-o-contrib-more { display:none; }
+.pub-o-contrib-all[open] .pub-o-contrib-less { display:inline; }
 .pub-o-doi { display:inline-block; font-size:0.82em; margin-top:0.15rem; }
 .pub-o-date { color:var(--muted); font-size:0.84em; white-space:nowrap; flex:none; }
 
