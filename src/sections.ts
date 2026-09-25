@@ -39,6 +39,8 @@ import type {
 } from "@singi-labs/sifa-sdk";
 import {
   collapseContributors,
+  groupPublicationVersions,
+  type PublicationVersionGroup,
   splitCoursesByRole,
   isTeachingCourse,
   getCourseRoleLabel,
@@ -334,7 +336,8 @@ function contributorsHtml(
 /** A non-Standard publication (Sifa/ORCID): title link, venue/type, contributors, DOI, date. */
 function otherPublicationRow(
   pub: ProfilePublication,
-  ownerDid: string
+  ownerDid: string,
+  versions: PublicationVersionGroup<ProfilePublication>["versions"] = []
 ): string {
   if (!pub.title) return "";
   const href = safeUrl(publicationHref(pub));
@@ -359,6 +362,25 @@ function otherPublicationRow(
         pub.doi
       )}" rel="noopener" target="_blank">doi.org/${escapeHtml(pub.doi)}</a>`
     );
+  // #590: other versions of this work (a preprint, older releases), folded
+  // under it rather than listed as separate rows.
+  for (const { pub: v, kind } of versions) {
+    const label =
+      [v.publisher ?? v.typeLabel, v.date ? formatTimelineDate(v.date) : ""]
+        .filter(Boolean)
+        .join(", ") || v.title;
+    const vHref = safeUrl(publicationHref(v));
+    const link = vHref
+      ? `<a href="${vHref}" rel="noopener" target="_blank">${escapeHtml(
+          label
+        )}</a>`
+      : escapeHtml(label);
+    parts.push(
+      `<div class="pub-o-meta">${
+        kind === "preprint" ? "Preprint" : "Other version"
+      }: ${link}</div>`
+    );
+  }
   const date = pub.date
     ? `<span class="pub-o-date">${escapeHtml(
         formatTimelineDate(pub.date)
@@ -386,8 +408,8 @@ function renderPublications(profile: Profile): string {
   const otherHead = groups
     ? '<h3 class="pub-other-head">Other publications</h3>'
     : "";
-  const otherRows = other
-    .map((pub) => otherPublicationRow(pub, profile.did))
+  const otherRows = groupPublicationVersions(other, { ownerDid: profile.did })
+    .map((g) => otherPublicationRow(g.lead, profile.did, g.versions))
     .filter((r) => r)
     .join("");
   return `${groups}${otherHead}<div class="pub-o-list">${otherRows}</div>`;
