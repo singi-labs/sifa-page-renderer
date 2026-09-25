@@ -587,3 +587,17 @@ describe("publications: versions of a publication fold into one entry (#590)", (
     expect(html.match(/pub-o-row/g)).toHaveLength(1);
   });
 });
+
+describe("courses: part of an Education entry (#595)", () => {
+  it("names the degree a course taken was part of", () => {
+    const html = buildProfileSections(
+      makeProfile({
+        education: [
+          { rkey: "e1", institution: "New York University", degree: "PhD" },
+        ],
+        courses: [{ rkey: "c1", name: "Linear Algebra", educationRkey: "e1" }],
+      })
+    ).find((s) => s.id === "courses")!.html;
+    expect(html).toContain("Part of: PhD, New York University");
+  });
+});

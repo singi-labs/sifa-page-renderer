@@ -476,6 +476,9 @@ function renderCourses(profile: Profile): string {
   const positionByRkey = new Map(
     (profile.positions ?? []).map((p) => [p.rkey, p] as const)
   );
+  const educationByRkey = new Map(
+    (profile.education ?? []).map((e) => [e.rkey, e] as const)
+  );
   const newestFirst = (
     items: ProfileCourse[],
     dateOf: (c: ProfileCourse) => string | undefined
@@ -506,16 +509,31 @@ function renderCourses(profile: Profile): string {
     const when = date
       ? ` <span class="cv-when">(${escapeHtml(date)})</span>`
       : "";
+    // #595: the Career or Education entry the course was part of.
     const pos = c.positionRkey ? positionByRkey.get(c.positionRkey) : undefined;
+    const edu =
+      !pos && c.educationRkey
+        ? educationByRkey.get(c.educationRkey)
+        : undefined;
     const posCompany = pos
       ? pos.agentRef?.name ?? pos.entityName ?? pos.company
       : undefined;
-    const partOf = pos
-      ? `<div class="cv-meta">Part of: ${escapeHtml(
-          posCompany
-            ? `${pos.title} at ${formatCompanyName(posCompany)}`
-            : pos.title
-        )}</div>`
+    const eduInstitution = edu
+      ? formatCompanyName(
+          edu.agentRef?.name ?? edu.entityName ?? edu.institution
+        )
+      : undefined;
+    const partOfLabel = pos
+      ? posCompany
+        ? `${pos.title} at ${formatCompanyName(posCompany)}`
+        : pos.title
+      : edu
+      ? edu.degree
+        ? `${edu.degree}, ${eduInstitution}`
+        : eduInstitution
+      : undefined;
+    const partOf = partOfLabel
+      ? `<div class="cv-meta">Part of: ${escapeHtml(partOfLabel)}</div>`
       : "";
     const cert = c.credentialRkey
       ? certByRkey.get(c.credentialRkey)
