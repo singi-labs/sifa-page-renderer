@@ -601,3 +601,16 @@ describe("courses: part of an Education entry (#595)", () => {
     expect(html).toContain("Part of: PhD, New York University");
   });
 });
+
+describe("projects: own role (#596)", () => {
+  it("shows the user's own role on a project, escaped", () => {
+    const html = buildProfileSections(
+      makeProfile({
+        projects: [{ rkey: "p1", name: "MNE-BIDS", role: "Maintainer <core>" }],
+      })
+    ).find((s) => s.id === "projects")!.html;
+    expect(html).toContain(
+      '<div class="cv-meta">Maintainer &lt;core&gt;</div>'
+    );
+  });
+});
