@@ -192,10 +192,14 @@ function renderProjects(profile: Profile): string {
         pr.url,
         pr.name ?? ""
       )}</strong>${whenSpan(formatDateRange(pr.startDate, pr.endDate))}`;
+      // The user's own role on the project (#596).
+      const role = pr.role
+        ? `<div class="cv-meta">${escapeHtml(pr.role)}</div>`
+        : "";
       const desc = pr.description
         ? `<div class="cv-desc">${renderMarkdown(pr.description)}</div>`
         : "";
-      return `<li class="cv-entry">${head}${desc}</li>`;
+      return `<li class="cv-entry">${head}${role}${desc}</li>`;
     })
   );
 }
