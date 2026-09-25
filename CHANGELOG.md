@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.42
+
+### Patch Changes
+
+- e21ea4e: Show the user's own role on a project (Maintainer, Project lead...) under the project name. Bumps `@singi-labs/sifa-sdk` to 0.19.36.
+
 ## 0.2.41
 
 ### Patch Changes
