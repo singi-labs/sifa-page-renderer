@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.39
+
+### Patch Changes
+
+- f785da5: List courses the user taught under a "Teaching" subheading, ahead of "Courses taken", with the teaching period as the date, a "Part of" line for the linked position, and the teaching assistant role named. Bumps `@singi-labs/sifa-sdk` to 0.19.31.
+
 ## 0.2.38
 
 ### Patch Changes
