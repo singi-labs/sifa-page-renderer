@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.40
+
+### Patch Changes
+
+- ad2bed6: Fold the versions of one publication into a single entry: a preprint or an older release is listed under the lead publication as a "Preprint" / "Other version" link, using the SDK's `groupPublicationVersions`. Bumps `@singi-labs/sifa-sdk` to 0.19.33.
+
 ## 0.2.39
 
 ### Patch Changes
