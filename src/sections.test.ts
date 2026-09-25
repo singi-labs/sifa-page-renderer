@@ -490,3 +490,58 @@ describe("publications: long contributor lists collapse (#589)", () => {
     );
   });
 });
+
+describe("courses: taught courses (#592)", () => {
+  const coursesHtml = (profile: Profile) =>
+    buildProfileSections(profile).find((s) => s.id === "courses")!.html;
+
+  it("adds no subheadings when every course was taken", () => {
+    const html = coursesHtml(
+      makeProfile({ courses: [{ rkey: "c1", name: "Algorithms" }] })
+    );
+    expect(html).not.toContain("<h3>Teaching</h3>");
+  });
+
+  it("lists taught courses under Teaching, ahead of the courses taken", () => {
+    const html = coursesHtml(
+      makeProfile({
+        positions: [
+          {
+            rkey: "p1",
+            title: "Adjunct Lecturer",
+            company: "NYU",
+            startedAt: "2015-09",
+          },
+        ],
+        courses: [
+          { rkey: "c1", name: "Algorithms", completedAt: "2010-06" },
+          {
+            rkey: "c2",
+            name: "Intro to Neuroscience",
+            role: "id.sifa.defs#courseTaught",
+            startedAt: "2015-09",
+            endedAt: "2017-05",
+            positionRkey: "p1",
+          },
+          {
+            rkey: "c3",
+            name: "Statistics",
+            role: "id.sifa.defs#courseTeachingAssistant",
+            startedAt: "2012",
+          },
+        ],
+      })
+    );
+    const teaching = html.indexOf("<h3>Teaching</h3>");
+    const taken = html.indexOf("<h3>Courses taken</h3>");
+    expect(teaching).toBeGreaterThan(-1);
+    expect(teaching).toBeLessThan(taken);
+    const teachingPart = html.slice(teaching, taken);
+    expect(teachingPart).toContain("Intro to Neuroscience");
+    expect(teachingPart).toContain("Sep 2015 - May 2017");
+    expect(teachingPart).toContain("Part of: Adjunct Lecturer at NYU");
+    expect(teachingPart).toContain("Teaching assistant");
+    expect(html.slice(taken)).toContain("Algorithms");
+    expect(html.slice(taken)).not.toContain("Intro to Neuroscience");
+  });
+});

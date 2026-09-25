@@ -39,6 +39,10 @@ import type {
 } from "@singi-labs/sifa-sdk";
 import {
   collapseContributors,
+  splitCoursesByRole,
+  isTeachingCourse,
+  getCourseRoleLabel,
+  COURSE_ROLE_TEACHING_ASSISTANT,
   type SectionId,
   SECTION_LABELS,
   getVisibleSectionIds,
@@ -447,39 +451,74 @@ function renderCourses(profile: Profile): string {
   );
   const certIssueDate = (rkey?: string): string | undefined =>
     rkey ? certByRkey.get(rkey)?.issueDate : undefined;
-  const items = visible(profile.courses);
-  const effectiveDate = (c: ProfileCourse): string | undefined =>
-    c.completedAt || certIssueDate(c.credentialRkey);
-  const dated = items.filter((c) => effectiveDate(c));
-  const undated = items.filter((c) => !effectiveDate(c));
-  dated.sort((a, b) =>
-    (effectiveDate(b) ?? "").localeCompare(effectiveDate(a) ?? "")
+  const positionByRkey = new Map(
+    (profile.positions ?? []).map((p) => [p.rkey, p] as const)
   );
-  const ordered = [...dated, ...undated];
-  return list(
-    ordered.map((c) => {
-      const inst = c.agentRef?.name ?? c.entityName ?? c.institution;
-      const issuer = inst
-        ? ` &mdash; ${escapeHtml(formatCompanyName(inst))}`
+  const newestFirst = (
+    items: ProfileCourse[],
+    dateOf: (c: ProfileCourse) => string | undefined
+  ): ProfileCourse[] => {
+    const dated = items.filter((c) => dateOf(c));
+    const undated = items.filter((c) => !dateOf(c));
+    dated.sort((a, b) => (dateOf(b) ?? "").localeCompare(dateOf(a) ?? ""));
+    return [...dated, ...undated];
+  };
+  // Courses the user taught (#592) render under "Teaching", ahead of the
+  // courses they took, with the teaching period as the date.
+  const { taken, teaching } = splitCoursesByRole(visible(profile.courses));
+  const row = (c: ProfileCourse): string => {
+    const inst = c.agentRef?.name ?? c.entityName ?? c.institution;
+    const issuer = inst
+      ? ` &mdash; ${escapeHtml(formatCompanyName(inst))}`
+      : "";
+    const role =
+      c.role === COURSE_ROLE_TEACHING_ASSISTANT
+        ? `, ${escapeHtml(getCourseRoleLabel(c.role) ?? "")}`
         : "";
-      const when = c.completedAt
-        ? ` <span class="cv-when">(${escapeHtml(
-            formatTimelineDate(c.completedAt)
-          )})</span>`
-        : "";
-      const cert = c.credentialRkey
-        ? certByRkey.get(c.credentialRkey)
-        : undefined;
-      const linked = cert
-        ? `<div class="cv-meta">Linked credential: ${safeAnchor(
-            cert.credentialUrl,
-            cert.name
-          )}</div>`
-        : "";
-      return `<li class="cv-entry"><strong>${escapeHtml(
-        c.name ?? ""
-      )}</strong>${issuer}${when}${linked}</li>`;
-    })
+    let date: string | undefined;
+    if (isTeachingCourse(c)) {
+      date = c.startedAt ? formatDateRange(c.startedAt, c.endedAt) : undefined;
+    } else {
+      date = c.completedAt ? formatTimelineDate(c.completedAt) : undefined;
+    }
+    const when = date
+      ? ` <span class="cv-when">(${escapeHtml(date)})</span>`
+      : "";
+    const pos = c.positionRkey ? positionByRkey.get(c.positionRkey) : undefined;
+    const posCompany = pos
+      ? pos.agentRef?.name ?? pos.entityName ?? pos.company
+      : undefined;
+    const partOf = pos
+      ? `<div class="cv-meta">Part of: ${escapeHtml(
+          posCompany
+            ? `${pos.title} at ${formatCompanyName(posCompany)}`
+            : pos.title
+        )}</div>`
+      : "";
+    const cert = c.credentialRkey
+      ? certByRkey.get(c.credentialRkey)
+      : undefined;
+    const linked = cert
+      ? `<div class="cv-meta">Linked credential: ${safeAnchor(
+          cert.credentialUrl,
+          cert.name
+        )}</div>`
+      : "";
+    return `<li class="cv-entry"><strong>${escapeHtml(
+      c.name ?? ""
+    )}</strong>${issuer}${role}${when}${partOf}${linked}</li>`;
+  };
+  const takenList = list(
+    newestFirst(
+      taken,
+      (c) => c.completedAt || certIssueDate(c.credentialRkey)
+    ).map(row)
+  );
+  if (!teaching.length) return takenList;
+  const teachingList = list(newestFirst(teaching, (c) => c.startedAt).map(row));
+  return (
+    `<h3>Teaching</h3>${teachingList}` +
+    (takenList ? `<h3>Courses taken</h3>${takenList}` : "")
   );
 }
 
