@@ -545,3 +545,45 @@ describe("courses: taught courses (#592)", () => {
     expect(html.slice(taken)).not.toContain("Intro to Neuroscience");
   });
 });
+
+describe("publications: versions of a publication fold into one entry (#590)", () => {
+  it("shows a preprint under its published version", () => {
+    const html = buildProfileSections(
+      makeProfile({
+        publications: [
+          {
+            rkey: "orcid-1",
+            source: "orcid",
+            title: "Broadening Access (preprint)",
+            publisher: "Zenodo",
+            type: "preprint",
+            doi: "10.5281/zenodo.17369779",
+            date: "2025-10",
+            relatedIdentifiers: [
+              {
+                identifier: "10.1162/99608f92.29efa129",
+                identifierType: "DOI",
+                relationType: "IsPublishedIn",
+              },
+            ],
+          },
+          {
+            rkey: "orcid-2",
+            source: "orcid",
+            title: "Broadening Access",
+            publisher: "Harvard Data Science Review",
+            type: "journal-article",
+            doi: "10.1162/99608f92.29efa129",
+            date: "2026-07",
+          },
+        ],
+      })
+    ).find((s) => s.id === "publications")!.html;
+    expect(html).toContain("Broadening Access</a>");
+    expect(html).not.toContain("Broadening Access (preprint)");
+    expect(html).toMatch(
+      /Preprint: <a [^>]*href="https:\/\/doi\.org\/10\.5281[^"]*"[^>]*>Zenodo, Oct 2025<\/a>/
+    );
+    expect(html.match(/pub-o-row/g)).toHaveLength(1);
+  });
+});
