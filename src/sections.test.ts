@@ -614,3 +614,32 @@ describe("projects: own role (#596)", () => {
     );
   });
 });
+
+describe("education: level (#594)", () => {
+  const education = (entries: Profile["education"]) =>
+    buildProfileSections(makeProfile({ education: entries })).find(
+      (s) => s.id === "education"
+    )!.html;
+
+  it("adds the level after the degree", () => {
+    expect(
+      education([
+        { rkey: "e1", institution: "TU Delft", degree: "PhD", fieldOfStudy: "Physics", eqfLevel: 8 },
+      ])
+    ).toContain("&mdash; PhD, Physics (Doctorate)");
+  });
+
+  it("leaves it out when the degree already names it", () => {
+    const html = education([
+      { rkey: "e1", institution: "TU Delft", degree: "Master of Arts", eqfLevel: 7 },
+    ]);
+    expect(html).toContain("&mdash; Master of Arts");
+    expect(html).not.toContain("(Master)");
+  });
+
+  it("shows the level alone when there is no degree text", () => {
+    expect(
+      education([{ rkey: "e1", institution: "TU Delft", eqfLevel: 6 }])
+    ).toContain("&mdash; Bachelor");
+  });
+});

@@ -51,6 +51,7 @@ import {
   filterHidden,
   sortPositions,
   sortEducation,
+  getEducationLevelDisplay,
   sortProjects,
   sortPublications,
   sortCertifications,
@@ -451,7 +452,11 @@ function renderEducation(profile: Profile): string {
       const inst = formatCompanyName(
         e.agentRef?.name ?? e.entityName ?? e.institution
       );
-      const degree = [e.degree, e.fieldOfStudy].filter(Boolean).join(", ");
+      const degreeText = [e.degree, e.fieldOfStudy].filter(Boolean).join(", ");
+      // #594: the level after the degree, unless the degree already names it.
+      const level = getEducationLevelDisplay(e);
+      const degree =
+        degreeText && level ? `${degreeText} (${level})` : degreeText || level;
       const head = `<strong>${escapeHtml(inst)}</strong>${
         degree ? ` &mdash; ${escapeHtml(degree)}` : ""
       }${whenSpan(formatDateRange(e.startedAt, e.endedAt))}`;
