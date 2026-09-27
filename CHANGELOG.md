@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.45
+
+### Patch Changes
+
+- c9aa7ff: State education in the Person JSON-LD. `AcademicProfile` gains an optional `education` list; each visible entry becomes a degree credential in `hasCredential` with its EQF level as `educationalLevel`, built by the SDK like sifa.id's graph. A full SDK `Profile` already carries the list, so callers passing one need no change.
+
 ## 0.2.44
 
 ### Patch Changes
