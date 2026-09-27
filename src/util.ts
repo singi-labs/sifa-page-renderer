@@ -7,7 +7,7 @@
  * import between them.
  */
 
-import { marked } from 'marked';
+import { Marked } from 'marked';
 import DOMPurify from 'isomorphic-dompurify';
 
 /** HTML-escape a value for safe interpolation into markup or an attribute. */
@@ -44,13 +44,27 @@ export function safeUrl(url: string | undefined | null): string | null {
 }
 
 /**
- * Convert profile-authored Markdown to HTML and sanitize it. `marked`
- * passes through raw HTML in its input verbatim (that's how Markdown
- * works), so unsanitized output would let profile content run arbitrary
- * script or event-handler attributes on the rendered page.
+ * Markdown parser that shows raw HTML as literal text instead of passing it
+ * through. Profile text such as `Tools: <React>, <Vue>` is prose, not markup;
+ * letting `marked` emit it as tags made DOMPurify drop the words entirely.
+ * Code spans keep their own escaping, so `Map<K, V>` in backticks is intact.
+ */
+const markdown = new Marked({
+  renderer: {
+    html({ text }) {
+      return escapeHtml(text);
+    },
+  },
+});
+
+/**
+ * Convert profile-authored Markdown to HTML and sanitize it. Raw HTML in the
+ * input is escaped at parse time (see `markdown`), and the output still goes
+ * through the DOMPurify allowlist, so profile content can never run script or
+ * event-handler attributes on the rendered page.
  */
 export function renderMarkdown(body: string): string {
-  return DOMPurify.sanitize(marked.parse(body) as string, {
+  return DOMPurify.sanitize(markdown.parse(body) as string, {
     ALLOWED_TAGS: [
       'p',
       'br',
