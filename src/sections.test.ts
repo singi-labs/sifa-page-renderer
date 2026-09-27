@@ -206,9 +206,27 @@ describe("buildProfileSections: security", () => {
       headline: "Engineer",
     });
     const about = buildProfileSections(profile).find((s) => s.id === "about")!;
-    expect(about.html).not.toContain("onerror");
-    expect(about.html).not.toContain("alert(1)");
+    // Raw HTML is shown as inert literal text, never parsed as markup.
+    expect(about.html).not.toMatch(/<script/i);
+    expect(about.html).not.toMatch(/<img/i);
+    expect(about.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(about.html).toContain("Hello");
+  });
+
+  it("shows angle-bracketed text literally instead of dropping it as a tag", () => {
+    const profile = makeProfile({
+      about: "Tools: <React>, <Vue> and `Map<K, V>`",
+      headline: "Engineer",
+      positions: [
+        { rkey: "1", title: "Dev", startedAt: "2020", description: "Built <DataGrid>." },
+      ],
+    });
+    const sections = buildProfileSections(profile);
+    const about = sections.find((s) => s.id === "about")!;
+    expect(about.html).toContain("Tools: &lt;React&gt;, &lt;Vue&gt;");
+    expect(about.html).toContain("<code>Map&lt;K, V&gt;</code>");
+    const career = sections.find((s) => s.id === "career")!;
+    expect(career.html).toContain("Built &lt;DataGrid&gt;.");
   });
 
   it("keeps safe Markdown formatting tags in a description", () => {
