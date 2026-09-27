@@ -22,7 +22,7 @@ import { escapeHtml, safeUrl } from "./util.js";
 import { navIcon } from "./section-icons.js";
 import type { RenderedSection } from "./sections.js";
 import type { LocationValue } from "@singi-labs/sifa-sdk";
-import { buildPersonJsonLd } from "@singi-labs/sifa-sdk/jsonld";
+import { buildPersonJsonLd, type JsonLdEducation } from "@singi-labs/sifa-sdk/jsonld";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
 import { renderHeatmap, type HeatmapDataInput } from "./heatmap.js";
 import { renderHighlights } from "./highlights.js";
@@ -83,6 +83,12 @@ export interface AcademicProfile {
     /** The link the owner marked primary in their profile's links section. */
     primary?: boolean | null;
   }> | null;
+  /**
+   * Education entries, stated in the Person JSON-LD as degree credentials with
+   * their EQF level (#594). A full SDK `Profile` satisfies this; hidden entries
+   * are left out by the SDK.
+   */
+  education?: readonly JsonLdEducation[] | null;
   /** Nested location object (some profiles use this shape). */
   location?: {
     locality?: string | null;
@@ -867,6 +873,7 @@ function personJsonLd(profile: AcademicProfile, ctx?: RenderContext): string {
       avatar: rawSafeUrl(profile.avatar) ?? undefined,
       location: locationValue(profile),
       verifiedAccounts,
+      education: profile.education ?? undefined,
     },
     { canonicalUrl: ctx?.canonical },
   );

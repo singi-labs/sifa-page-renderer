@@ -1163,4 +1163,33 @@ describe("Person JSON-LD is built by the SDK", () => {
   it("renders nothing when there is neither a display name nor a handle", () => {
     expect(jsonLd({ headline: "Nobody" })).toBeNull();
   });
+
+  // #594: education reaches the graph as credentials, with the EQF level.
+  it("states education as degree credentials with their level", () => {
+    const ld = jsonLd({
+      ...BASE,
+      education: [
+        { institution: "TU Delft", degree: "PhD", fieldOfStudy: "Physics", eqfLevel: 8 },
+        { institution: "Hidden U", degree: "BSc", hidden: true },
+      ],
+    });
+    expect(ld.hasCredential).toEqual([
+      {
+        "@type": "EducationalOccupationalCredential",
+        credentialCategory: "degree",
+        name: "PhD Physics",
+        educationalLevel: expect.objectContaining({
+          "@type": "DefinedTerm",
+          name: "Doctorate",
+          termCode: "8",
+        }),
+        recognizedBy: { "@type": "EducationalOrganization", name: "TU Delft" },
+      },
+    ]);
+    expect(JSON.stringify(ld)).not.toContain("Hidden U");
+  });
+
+  it("omits hasCredential when there is no education", () => {
+    expect(jsonLd(BASE).hasCredential).toBeUndefined();
+  });
 });
