@@ -22,7 +22,16 @@ import { escapeHtml, safeUrl } from "./util.js";
 import { navIcon } from "./section-icons.js";
 import type { RenderedSection } from "./sections.js";
 import type { LocationValue } from "@singi-labs/sifa-sdk";
-import { buildPersonJsonLd, type JsonLdEducation } from "@singi-labs/sifa-sdk/jsonld";
+import {
+  buildPersonJsonLd,
+  type JsonLdCertification,
+  type JsonLdEducation,
+  type JsonLdHonor,
+  type JsonLdLanguage,
+  type JsonLdPosition,
+  type JsonLdSkill,
+  type JsonLdVolunteering,
+} from "@singi-labs/sifa-sdk/jsonld";
 import { renderActivityStream, type ActivityStreamOptions } from "./activity.js";
 import { renderHeatmap, type HeatmapDataInput } from "./heatmap.js";
 import { renderHighlights } from "./highlights.js";
@@ -84,11 +93,20 @@ export interface AcademicProfile {
     primary?: boolean | null;
   }> | null;
   /**
-   * Education entries, stated in the Person JSON-LD as degree credentials with
-   * their EQF level (#594). A full SDK `Profile` satisfies this; hidden entries
-   * are left out by the SDK.
+   * Profile sections stated in the Person JSON-LD, the same set sifa.id states:
+   * education as degree credentials with their EQF level (#594), positions as
+   * `worksFor`, skills as `knowsAbout`, certifications as credentials,
+   * volunteering as `memberOf`, honors as `award`, languages as
+   * `knowsLanguage`. A full SDK `Profile` satisfies these; hidden entries are
+   * left out by the SDK.
    */
   education?: readonly JsonLdEducation[] | null;
+  positions?: readonly JsonLdPosition[] | null;
+  skills?: readonly JsonLdSkill[] | null;
+  certifications?: readonly JsonLdCertification[] | null;
+  volunteering?: readonly JsonLdVolunteering[] | null;
+  honors?: readonly JsonLdHonor[] | null;
+  languages?: readonly JsonLdLanguage[] | null;
   /** Nested location object (some profiles use this shape). */
   location?: {
     locality?: string | null;
@@ -874,6 +892,17 @@ function personJsonLd(profile: AcademicProfile, ctx?: RenderContext): string {
       location: locationValue(profile),
       verifiedAccounts,
       education: profile.education ?? undefined,
+      positions: profile.positions ?? undefined,
+      skills: profile.skills ?? undefined,
+      // The SDK emits credentialUrl as-is, so it is scheme-checked here like
+      // every other user-authored URL.
+      certifications: profile.certifications?.map((c) => ({
+        ...c,
+        credentialUrl: rawSafeUrl(c.credentialUrl) ?? undefined,
+      })),
+      volunteering: profile.volunteering ?? undefined,
+      honors: profile.honors ?? undefined,
+      languages: profile.languages ?? undefined,
     },
     { canonicalUrl: ctx?.canonical },
   );

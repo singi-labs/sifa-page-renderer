@@ -1192,4 +1192,51 @@ describe("Person JSON-LD is built by the SDK", () => {
   it("omits hasCredential when there is no education", () => {
     expect(jsonLd(BASE).hasCredential).toBeUndefined();
   });
+
+  // The page graph states the same sections sifa.id's does.
+  it("states positions, skills, certifications, volunteering, honors and languages", () => {
+    const ld = jsonLd({
+      ...BASE,
+      headline: null,
+      positions: [
+        { company: "Acme", title: "Engineer", startedAt: "2020-01" },
+        { company: "Secret Co", title: "Spy", hidden: true },
+      ],
+      skills: [{ name: "TypeScript", endorsementCount: 3 }],
+      certifications: [
+        { name: "AWS SA", issuingOrg: "Amazon", credentialUrl: "https://aws.example/c/1" },
+      ],
+      volunteering: [{ organization: "Code Club", role: "Mentor" }],
+      honors: [{ title: "Best Paper" }],
+      languages: [{ language: "Dutch" }],
+    });
+    expect(ld.worksFor).toEqual([
+      {
+        "@type": "Organization",
+        name: "Acme",
+        member: { "@type": "OrganizationRole", roleName: "Engineer", startDate: "2020-01" },
+      },
+    ]);
+    expect(ld.jobTitle).toBe("Engineer");
+    expect(ld.knowsAbout).toEqual(["TypeScript"]);
+    expect(ld.hasCredential).toEqual([
+      expect.objectContaining({ name: "AWS SA", url: "https://aws.example/c/1" }),
+    ]);
+    expect(ld.memberOf).toEqual([
+      expect.objectContaining({ roleName: "Mentor", memberOf: { "@type": "Organization", name: "Code Club" } }),
+    ]);
+    expect(ld.award).toEqual(["Best Paper"]);
+    expect(ld.knowsLanguage).toEqual(["Dutch"]);
+    expect(JSON.stringify(ld)).not.toContain("Secret Co");
+  });
+
+  it("drops a non-http(s) credential URL but keeps the credential", () => {
+    const ld = jsonLd({
+      ...BASE,
+      certifications: [{ name: "Cert", credentialUrl: "javascript:alert(1)" }],
+    });
+    expect(ld.hasCredential).toEqual([
+      { "@type": "EducationalOccupationalCredential", name: "Cert" },
+    ]);
+  });
 });
