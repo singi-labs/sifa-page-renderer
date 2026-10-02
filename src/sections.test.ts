@@ -661,3 +661,38 @@ describe("education: level (#594)", () => {
     ).toContain("&mdash; Bachelor");
   });
 });
+
+describe("publications: opt-in OpenAlex citation counts (#618)", () => {
+  function publicationsHtml(publications: Profile["publications"]): string {
+    return buildProfileSections(makeProfile({ publications })).find(
+      (s) => s.id === "publications"
+    )!.html;
+  }
+
+  it("shows the count linking to the OpenAlex work when the AppView sent one", () => {
+    const html = publicationsHtml([
+      {
+        rkey: "1",
+        title: "Cited Paper",
+        doi: "10.1/a",
+        citationCount: 1234,
+        openAlexId: "W42",
+      },
+    ]);
+    expect(html).toMatch(
+      /<a class="pub-o-cites" href="https:\/\/openalex\.org\/W42"[^>]*>Citations \(OpenAlex\): 1,234<\/a>/
+    );
+  });
+
+  it("renders the count as text when the work id is unusable", () => {
+    const html = publicationsHtml([
+      { rkey: "1", title: "Paper", doi: "10.1/a", citationCount: 3, openAlexId: "x" },
+    ]);
+    expect(html).toContain('<div class="pub-o-cites">Citations (OpenAlex): 3</div>');
+  });
+
+  it("renders a publication without a count as before", () => {
+    const html = publicationsHtml([{ rkey: "1", title: "Plain", doi: "10.1/b" }]);
+    expect(html).not.toContain("OpenAlex");
+  });
+});

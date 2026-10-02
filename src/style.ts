@@ -220,6 +220,7 @@ html[data-devbanner="off"] .dev-banner { display:none; }
 .pub-o-contrib-less, .pub-o-contrib-all[open] .pub-o-contrib-more { display:none; }
 .pub-o-contrib-all[open] .pub-o-contrib-less { display:inline; }
 .pub-o-doi { display:inline-block; font-size:0.82em; margin-top:0.15rem; }
+.pub-o-cites { display:block; color:var(--muted); font-size:0.82em; margin-top:0.1rem; }
 .pub-o-date { color:var(--muted); font-size:0.84em; white-space:nowrap; flex:none; }
 
 /* Highlights block (renderHighlights): one ongoing / most-recent record per
