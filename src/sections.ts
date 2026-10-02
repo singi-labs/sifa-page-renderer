@@ -39,6 +39,7 @@ import type {
 } from "@singi-labs/sifa-sdk";
 import {
   collapseContributors,
+  openAlexWorkUrl,
   groupPublicationVersions,
   type PublicationVersionGroup,
   splitCoursesByRole,
@@ -367,6 +368,20 @@ function otherPublicationRow(
         pub.doi
       )}" rel="noopener" target="_blank">doi.org/${escapeHtml(pub.doi)}</a>`
     );
+  // #618: OpenAlex citation count, only sent when the owner opted in.
+  if (pub.citationCount !== undefined) {
+    const label = `Citations (OpenAlex): ${pub.citationCount.toLocaleString(
+      "en-US"
+    )}`;
+    const citesHref = openAlexWorkUrl(pub.openAlexId);
+    parts.push(
+      citesHref
+        ? `<a class="pub-o-cites" href="${escapeHtml(
+            citesHref
+          )}" rel="noopener" target="_blank">${label}</a>`
+        : `<div class="pub-o-cites">${label}</div>`
+    );
+  }
   // #590: other versions of this work (a preprint, older releases), folded
   // under it rather than listed as separate rows.
   for (const { pub: v, kind } of versions) {
