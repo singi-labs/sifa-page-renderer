@@ -1,5 +1,11 @@
 # @singi-labs/sifa-page-renderer
 
+## 0.2.48
+
+### Patch Changes
+
+- cedd7cb: Update isomorphic-dompurify to 4.6.0, which resolves dompurify 3.4.17 and picks up the fixes for GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and GHSA-c6gr-qvv4-5v3f.
+
 ## 0.2.47
 
 ### Patch Changes
